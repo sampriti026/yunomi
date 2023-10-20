@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "173733886535",
+    "project_id": "yunomi026",
+    "storage_bucket": "yunomi026.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:173733886535:android:5c7d85fb806b56e9074f62",
+        "android_client_info": {
+          "package_name": "com.yunomi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "173733886535-6oaoo4kmbc0klm9jmtj9vnjjg8jc6u1t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yunomi",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "173733886535-jvvko61hq82j9euu278a61df1hhig9vu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmLYVQv5uvKI7dYZBSI7Zrzc03Yx-iAvQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "173733886535-3suartcobic1je2vb80dukaitc6d48bn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
