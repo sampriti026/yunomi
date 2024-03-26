@@ -1,82 +1,121 @@
 // ChatsList.js
-import React, {useEffect, useState} from 'react';
-import {View, Text, FlatList, Image, StyleSheet, Button} from 'react-native';
-import photo from '../assets/photo.png';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+import Icon from 'react-native-vector-icons/FontAwesome'; // Import Icon from react-native-vector-icons
 
-const ChatsList = ({userId}) => {
-  const [chatsData, setChatsData] = useState([]);
+const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
+  const [chats, setChats] = useState([]);
+  const [apiUrl, setApiUrl] = useState('');
 
-  const API_URL = 'http://10.0.2.2:8000';
-
-  useEffect(() => {
-    console.log('UserId passed to ChatList:', userId);
-
-    const fetchChats = async () => {
-      try {
-        const response = await fetch(
-          `${API_URL}/get_latest_chats?user_id=${userId}`,
-        );
-        const data = await response.json();
-        setChatsData(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    if (userId) {
-      fetchChats();
-    }
-  }, [userId]);
-
-  if (chatsData.length === 0) {
-    return (
-      <View style={styles.noChatsContainer}>
-        <Text style={styles.noChatsText}>
-          Person never chatted with anyone. Send a text?
-        </Text>
-        <Button
-          title="Send a Text"
-          onPress={() => {
-            /* Handle send text action here */
-          }}
-        />
-      </View>
-    );
+  async function isEmulator() {
+    return await DeviceInfo.isEmulator();
   }
 
+  useEffect(() => {
+    const initializeApiUrl = async () => {
+      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
+      const API_URL_DEVICE = 'http://192.168.0.104';
+
+      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
+      setApiUrl(url); // Set the state
+    };
+
+    initializeApiUrl();
+  }, []);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      if (!apiUrl) return;
+      try {
+        const response = await fetch(
+          `${apiUrl}/get_chatlist?user_id=${userId}`,
+        );
+        const data = await response.json();
+        if (data && data.length > 0) {
+          let filteredChats = data;
+          // If viewing someone else's profile, filter out private chats
+          if (viewOnlyPublic) {
+            filteredChats = data.filter(chat => !chat.is_private);
+          }
+          setChats(filteredChats);
+        }
+      } catch (error) {
+        console.error('Error fetching chats:', error);
+      }
+    };
+
+    fetchChats();
+  }, [userId, apiUrl]);
+
   return (
-    <FlatList
-      data={chatsData}
-      keyExtractor={item => item.id}
-      renderItem={({item}) => (
-        <View style={styles.chatItem}>
-          <Image source={photo} style={styles.dp} />
-          <View style={styles.chatTextContainer}>
-            <View style={styles.chatHeader}>
-              <Text style={styles.chatName}>
-                {item.name}{' '}
-                <Text style={styles.chatUsername}>{item.username}</Text>
-              </Text>
-              <Text style={styles.chatDate}>{item.date}</Text>
+    <View>
+      {chats.map(chat => {
+        const otherUser = chat.participants.find(p => p.user_id !== userId);
+        const isPrivate = chat.is_private;
+        return (
+          <TouchableOpacity
+            key={chat.conversation_id}
+            onPress={() =>
+              onChatSelect(
+                otherUser.user_id,
+                otherUser.display_name,
+                otherUser.username,
+                otherUser.profilePic,
+                otherUser.bio,
+                isPrivate,
+                chat.conversation_id,
+                otherUser.dob,
+              )
+            }>
+            <View style={styles.chatItem}>
+              {/* Assuming you have a profile image URL in your user details */}
+              <Image
+                source={{
+                  uri:
+                    otherUser.profilePic || 'https://via.placeholder.com/150',
+                }}
+                style={styles.dp}
+              />
+              <View style={styles.chatTextContainer}>
+                <Text style={styles.chatName}>{otherUser.display_name}</Text>
+                <Text style={styles.chatUsername}>@{otherUser.username}</Text>
+                <Text style={styles.chatLastMessage}>{chat.last_message}</Text>
+                {chat.is_private && (
+                  <Icon
+                    name="lock"
+                    size={40}
+                    color="#FFFFFF"
+                    style={styles.lockIcon}
+                  />
+                )}
+              </View>
             </View>
-            <Text
-              style={styles.chatLastMessage}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {item.lastMessage}
-            </Text>
-          </View>
-        </View>
-      )}
-    />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 };
 
+// Add styles for ChatsList here
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   chatItem: {
     flexDirection: 'row',
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+    alignItems: 'center',
   },
   dp: {
     width: 50,
@@ -86,24 +125,28 @@ const styles = StyleSheet.create({
   },
   chatTextContainer: {
     flex: 1,
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'center',
   },
   chatName: {
     fontWeight: 'bold',
-  },
-  chatDate: {
-    color: 'grey',
+    fontSize: 16,
+    color: '#FFFFFF', // Changed to white
   },
   chatUsername: {
-    color: 'grey',
-    fontWeight: 'normal',
+    fontSize: 14,
+    color: '#FFFFFF', // Changed to white
   },
+  lockIcon: {
+    position: 'absolute',
+    right: 0,
+    top: '30%',
+    transform: [{translateY: -7}], // Adjust based on your layout
+  },
+
   chatLastMessage: {
-    paddingTop: 7,
+    fontSize: 14,
+    color: 'grey',
+    paddingTop: 5,
   },
 });
 

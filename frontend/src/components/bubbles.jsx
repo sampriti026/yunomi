@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const formatTimestamp = (isoTimestamp) => {
+import {View, Text, StyleSheet} from 'react-native';
+
+const formatTimestamp = isoTimestamp => {
   const date = new Date(isoTimestamp);
   const hours = date.getHours();
   const minutes = date.getMinutes();
@@ -13,55 +14,28 @@ const formatTimestamp = (isoTimestamp) => {
 
   // For 12-hour format like "11:53 PM"
   const amOrPm = hours >= 12 ? 'PM' : 'AM';
-  const formattedHours = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);  // Convert 24-hour to 12-hour format
+  const formattedHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours; // Convert 24-hour to 12-hour format
 
   return `${formattedHours}:${formattedMinutes} ${amOrPm}`;
 };
 
-const OptionButton = ({ option, onPress }) => (
-  <TouchableOpacity style={styles.optionButton} onPress={() => onPress(option)}>
-    <Text style={styles.optionButtonText}>{option}</Text>
-  </TouchableOpacity>
-);
-
-const LeftOption = ({ text, timestamp,  options = [], onOptionPress }) => (
-  <View style={styles.leftContainer}>
-    <View style={styles.leftBubble}>
-      <Text style={styles.leftText}>{text}</Text>
-      <View style={styles.footer}>
-        <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
-        <Text style={styles.checkmark}>✓</Text>
-      </View>
-    </View>
-    <View style={styles.optionsContainer}>
-      {options.map(option => (
-        <OptionButton key={option} option={option} onPress={onOptionPress} />
-      ))}
-    </View>
-  </View>
-);
-
-
-
-const RightBubble = ({ text, timestamp }) => (
+const RightBubble = ({text, timestamp}) => (
   <View style={styles.rightContainer}>
     <View style={styles.rightBubble}>
       <Text style={styles.rightText}>{text}</Text>
       <View style={styles.footer}>
         <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
-        <Text style={styles.checkmark}>✓</Text>
       </View>
     </View>
   </View>
 );
 
-const LeftBubble = ({ text, timestamp }) => (
+const LeftBubble = ({text, timestamp}) => (
   <View style={styles.leftContainer}>
     <View style={styles.leftBubble}>
       <Text style={styles.leftText}>{text}</Text>
       <View style={styles.footer}>
         <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
-        <Text style={styles.checkmark}>✓</Text>
       </View>
     </View>
   </View>
@@ -132,7 +106,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
   },
-
 });
 
-export { RightBubble, LeftBubble, LeftOption };
+export {RightBubble, LeftBubble};

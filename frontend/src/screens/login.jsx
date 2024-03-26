@@ -1,169 +1,94 @@
 import React, {useState, useEffect} from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  Button,
-  TextInput,
-  Text,
-  ScrollView,
-} from 'react-native';
-import auth from '@react-native-firebase/auth';
+import {StyleSheet, TouchableOpacity, View, Text} from 'react-native';
 import axios from 'axios';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import {BackHandler} from 'react-native';
-
-const API_URL = 'http://10.0.2.2:8000';
+import DeviceInfo from 'react-native-device-info';
+import auth from '@react-native-firebase/auth';
+import MultiStepForm from '../components/Multistepform';
+import EmailPasswordLoginForm from '../components/emailpassword';
+import {updateFcmToken} from '../components/updatefcm';
 
 GoogleSignin.configure({
   webClientId:
     '173733886535-jvvko61hq82j9euu278a61df1hhig9vu.apps.googleusercontent.com',
-
   // Replace with your webClientId
 });
 
 function LoginPage({navigation}) {
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
-  const [dob, setDob] = useState('');
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
   const [message, setMessage] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [googleId, setGoogleId] = useState(null);
+  const [firebaseUid, setFirebaseUid] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
+  const [isSignUpViaGoogle, setIsSignUpViaGoogle] = useState(false);
+  const [email, setEmail] = useState('');
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+
+  async function isEmulator() {
+    return await DeviceInfo.isEmulator();
+  }
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Reset states when the login screen is focused
+      setShowEmailLogin(false);
+      setMessage('');
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
+    const initializeApiUrl = async () => {
+      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
+      const API_URL_DEVICE = 'http://192.168.0.104';
+
+      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
+      setApiUrl(url); // Set the state
+    };
+
+    initializeApiUrl();
+  }, []);
 
   const onGoogleButtonPress = async () => {
     try {
+      await GoogleSignin.signOut(); // Sign out before signing in
       const {idToken, user} = await GoogleSignin.signIn();
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+      const userCredential = await auth().signInWithCredential(
+        googleCredential,
+      );
+
+      setFirebaseUid(userCredential.user.uid);
+      console.log(firebaseUid, 'firebaseuid');
+      console.log(userCredential.user.uid, 'usercreddd');
+      setEmail(userCredential.user.email); // Get the user's email address
+
       const googleId = user.id;
       setGoogleId(user.id);
-
-      let responseStatus = null;
-      let responseData = null;
-
-      await axios
-        .get(`${API_URL}/check_user_exists/${googleId}/`)
-        .then(response => {
-          responseStatus = response.status;
-          responseData = response.data;
-        })
-        .catch(error => {
-          if (error.response) {
-            responseStatus = error.response.status;
-            responseData = error.response.data;
-          } else {
-            throw error; // If it's another kind of error, throw it so the outer catch block can handle it
-          }
-        });
-
-      console.log('Response from backend:', responseStatus, responseData);
-
-      if (responseStatus === 200) {
+      const response = await axios.get(
+        `${apiUrl}/check_user_exists/${googleId}`,
+      );
+      if (response.data.user_exists) {
         console.log('User exists in the system.');
-        const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-        await auth().signInWithCredential(googleCredential);
         setMessage('Welcome back');
         navigation.navigate('FrameTabsScreen');
-      } else if (responseStatus === 404) {
+        await updateFcmToken(userCredential.user.uid, apiUrl);
+      } else {
         console.log('User not found in the system.');
         setIsFirstTimeUser(true);
+        setIsSignUpViaGoogle(true);
       }
     } catch (error) {
-      console.error('Error in Google Sign In:', error.message);
+      console.error('Error in Google Sign In:', error);
     }
   };
 
-  const signOut = async () => {
-    try {
-      // Sign out from Firebase
-      await auth().signOut();
-
-      // Sign out from Google Signin
-      await GoogleSignin.revokeAccess();
-      await GoogleSignin.signOut();
-
-      setMessage('Signed out successfully.');
-    } catch (error) {
-      console.error('Error signing out:', error.message);
-      setMessage('Error during sign out. Please try again.');
-    }
-  };
-
-  const submitDetails = async () => {
-    if (!name || !dob || !username) {
-      setMessage('Please fill out all fields before submitting.');
-      return;
-    }
-
-    try {
-      // Attempt to fetch the user by username
-      const response = await axios.get(`${API_URL}/get_user/${username}/`);
-
-      // If the response contains data, it means the username is already taken
-      if (response.data) {
-        setMessage('Username is already taken. Please choose another.');
-        return;
-      }
-    } catch (error) {
-      // Here, we catch potential errors from the axios call
-      if (error.response && error.response.status === 404) {
-        // A 404 means the username doesn't exist and thus can be used
-
-        try {
-          const googleIdToken = await GoogleSignin.getTokens();
-          const googleCredential = auth.GoogleAuthProvider.credential(
-            googleIdToken.idToken,
-          );
-
-          // Sign in to Firebase to ensure we have a Firebase user
-          await auth().signInWithCredential(googleCredential);
-
-          // Use Firebase UID as the reference
-          const firebaseUID = auth().currentUser.uid;
-
-          await axios.post(`${API_URL}/create_user/`, {
-            firebase_uid: firebaseUID,
-            display_name: name,
-            username: username,
-            dob: dob,
-            bio: '',
-            google_user_id: googleId,
-          });
-
-          setIsFirstTimeUser(false);
-          setMessage('Welcome to the app!');
-          navigation.navigate('FrameTabsScreen');
-          return; // This is important, to prevent the code from executing further
-        } catch (innerError) {
-          if (innerError.response && innerError.response.data) {
-            console.error(
-              'Error during user creation:',
-              innerError.response.data,
-            );
-          } else {
-            console.error('Error during user creation:', innerError.message);
-          }
-          setMessage('Error during profile creation. Please try again.');
-          return;
-        }
-      } else {
-        // Handle other errors here
-        console.error('Error fetching username:', error.message);
-        setMessage('Error during username submission. Please try again.');
-        return;
-      }
-    }
-  };
-
-  const onDateChange = (event, selectedDate) => {
-    setShowDatePicker(false); // close date picker after selection
-    if (selectedDate) {
-      setDob(
-        `${selectedDate.getDate()}-${
-          selectedDate.getMonth() + 1
-        }-${selectedDate.getFullYear()}`,
-      );
-    }
+  const onDirectSignUpPress = () => {
+    setIsFirstTimeUser(true);
+    setIsSignUpViaGoogle(false); // Explicitly mark as not signing up via Google
   };
 
   useEffect(() => {
@@ -172,6 +97,7 @@ function LoginPage({navigation}) {
       'hardwareBackPress',
       handleBackPress,
     );
+    setShowEmailLogin(false);
 
     return () => backHandler.remove();
   }, []);
@@ -181,9 +107,9 @@ function LoginPage({navigation}) {
       // Sign out from Firebase
       await auth().signOut();
 
-      // Sign out from Google Signin
-      await GoogleSignin.revokeAccess();
-      await GoogleSignin.signOut();
+      // // Sign out from Google Signin
+      // await GoogleSignin.revokeAccess();
+      // await GoogleSignin.signOut();
 
       // Optionally, navigate user to a specific screen, e.g., LandingPage
       navigation.navigate('LandingPage');
@@ -195,53 +121,50 @@ function LoginPage({navigation}) {
     return true;
   };
 
+  const onLoginWithEmailPress = async () => {
+    setShowEmailLogin(true);
+  };
+
   return (
     <View style={styles.container}>
-      {isFirstTimeUser ? (
-        <View style={styles.inputContainer}>
-          <TextInput
-            placeholder="Name"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-            <TextInput
-              placeholder="Date of Birth"
-              value={dob}
-              editable={false} // make it non-editable
-              style={styles.input}
-            />
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode={'date'}
-              is24Hour={true}
-              display="default"
-              onChange={onDateChange}
-            />
-          )}
-
-          <TextInput
-            placeholder="Enter unique username"
-            value={username}
-            onChangeText={setUsername}
-            style={styles.input}
-          />
-          <TouchableOpacity style={styles.button} onPress={submitDetails}>
-            <Text style={styles.buttonText}>Submit</Text>
-          </TouchableOpacity>
-        </View>
+      {!isFirstTimeUser && !showEmailLogin ? (
+        <>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onGoogleButtonPress}>
+              <Text style={styles.buttonText}>Sign in with Google</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onDirectSignUpPress}>
+              <Text style={styles.buttonText}>Sign Up</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onLoginWithEmailPress}>
+              <Text style={styles.buttonText}>
+                Login with Email and Password
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : showEmailLogin ? (
+        <EmailPasswordLoginForm
+          setMessage={setMessage}
+          navigation={navigation}
+          apiUrl={apiUrl}
+        />
       ) : (
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={onGoogleButtonPress}>
-            <Text style={styles.buttonText}>Sign in with Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={signOut}>
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+        <MultiStepForm
+          apiUrl={apiUrl}
+          setMessage={setMessage}
+          navigation={navigation}
+          isSignUpViaGoogle={isSignUpViaGoogle}
+          googleId={googleId}
+          firebaseUid={firebaseUid}
+          email={email}
+        />
       )}
       {message && <Text style={styles.message}>{message}</Text>}
     </View>
@@ -259,7 +182,7 @@ const styles = StyleSheet.create({
     width: '80%',
   },
   buttonContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     width: '80%',
   },

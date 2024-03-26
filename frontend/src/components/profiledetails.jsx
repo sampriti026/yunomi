@@ -1,21 +1,21 @@
 // ProfileDetails.js
 import React from 'react';
 import {View, Text, Image, StyleSheet} from 'react-native';
-import photo from '../assets/photo.png';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
-const ProfileDetails = () => {
+const ProfileDetails = ({profilePic, displayName, username, bio}) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image source={photo} style={styles.image} />
+        <Image
+          source={{uri: profilePic || 'https://via.placeholder.com/150'}}
+          style={styles.image}
+        />
         <View style={styles.textContainer}>
-          <Text style={styles.displayName}>Display Name</Text>
-          <Text style={styles.username}>@username</Text>
+          <Text style={styles.displayName}>{displayName}</Text>
+          <Text style={styles.username}>@{username}</Text>
         </View>
       </View>
-      <Text style={styles.bio}>
-        Bio: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-      </Text>
+      <Text style={styles.bio}>Bio: {bio || 'No bio available'}</Text>
       {/* Add other profile details here */}
     </View>
   );

@@ -1,170 +1,120 @@
 import React, {useRef, useState, useEffect} from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  Animated,
-  PanResponder,
-  Button,
-} from 'react-native';
+import {StyleSheet, View, Animated, PanResponder} from 'react-native';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
 import InputBox from '../components/inputbox';
 import {LeftBubble, RightBubble} from '../components/bubbles';
 import axios from 'axios';
 import {ScrollView} from 'react-native';
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
-import {Modal, TouchableOpacity} from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import Profile from '../components/profile';
-import photo from '../assets/photo.png';
+import DeviceInfo from 'react-native-device-info';
+import ContactCard from '../components/contact';
+import {BackHandler, ToastAndroid} from 'react-native';
 
 const Nomi = ({navigation}) => {
   const userId = auth().currentUser ? auth().currentUser.uid : null;
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const position = useRef(new Animated.Value(0)).current;
   const [activeLabel, setActiveLabel] = useState('nomi');
   const scrollViewRef = useRef(null);
+  const [apiUrl, setApiUrl] = useState('');
+  const [lastBackPressed, setLastBackPressed] = useState(0);
 
-  const API_URL = 'http://10.0.2.2:8000';
-
-  const fetchData = async () => {
-    // Replace with the actual user ID
-    const message = {
-      user_id: userId,
-      text: userInput,
-    };
-
-    try {
-      // Fetch existing messages from Firestore
-      const querySnapshot = await firestore()
-        .collection('conversations')
-        .doc(userId)
-        .collection('messages')
-        .orderBy('timestamp')
-        .get();
-      const historicalMessages = querySnapshot.docs.map(doc => doc.data());
-      setMessages(historicalMessages);
-      console.log('UserId:', userId);
-
-      // // Send initial message to bot (if needed)
-      // const response = await axios.post(`${API_URL}/start_conversation`, message);
-      // if (response.data.status === 'success') {
-      //   // handle the logic for bot's introductory messages if necessary...
-      // }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
-
-  const contact = {
-    name: 'Sampriti',
-    dp: photo, // Replace with actual image URL
-  };
-
-  const handlePress = () => {
-    navigation.navigate('Profile'); // Replace 'AnotherScreen' with the name of the screen you want to navigate to
-  };
-
-  const signOut = async () => {
-    try {
-      // Sign out from Firebase
-      await auth().signOut();
-
-      // Sign out from Google Signin
-      await GoogleSignin.revokeAccess();
-      await GoogleSignin.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error.message);
-    }
-
-    navigation.navigate('Login');
-  };
+  async function isEmulator() {
+    return await DeviceInfo.isEmulator();
+  }
 
   useEffect(() => {
-    fetchBotConversation(); // This function will call the /start_conversation endpoint when the component mounts
-  }, []);
+    const initializeApiUrl = async () => {
+      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
+      const API_URL_DEVICE = 'http://192.168.0.104';
 
-  const sendMessage = async (userInput, selectedOption = null) => {
-    const message = {
-      user_id: userId,
-      text: userInput,
+      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
+      setApiUrl(url); // Set the state
     };
 
+    initializeApiUrl();
+  }, []);
+
+  useEffect(() => {
+    // Function to handle back button press
+    const backAction = () => {
+      const now = Date.now();
+      // Check if the back button was pressed twice within 2 seconds
+      if (lastBackPressed && now - lastBackPressed <= 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+      // Update the last back press timestamp and show the toast
+      setLastBackPressed(now);
+      ToastAndroid.show('Press again to exit', ToastAndroid.SHORT);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+    return () => backHandler.remove();
+  }, [lastBackPressed]);
+
+  const sendBotMessage = async (userInput, selectedOption = null) => {
+    const userMessage = {
+      from_bot: false,
+      text: selectedOption || userInput,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+
     try {
-      const response = await axios.post(`${API_URL}/receive_message`, message);
+      const response = await axios.post(`${apiUrl}/receive_message`, {
+        user_id: userId,
+        text: userInput,
+      });
 
-      // Add the user's message to the chat list
-      const userMessage = {
-        from_bot: false,
-        text: selectedOption || userInput,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prevMessages => [...prevMessages, userMessage]);
+      if (response.data && response.data.length > 0) {
+        // Directly add the new messages from the response to the state
+        const newMessages = response.data.map(item => ({
+          ...item, // Spread all properties from the item
+          timestamp: new Date().toISOString(), // Ensure each message has a timestamp
+          from_bot: true, // Mark as from the bot, assuming all responses are bot messages
+        }));
 
-      // Add bot's response to the chat list
-      const botMessage = {
-        from_bot: true,
-        text: response.data.response,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prevMessages => [...prevMessages, botMessage]);
+        setMessages(prevMessages => [...prevMessages, ...newMessages]);
+      }
 
-      // Clear the user input
-      setUserInput('');
-
-      // Save messages to Firestore
-      const userId = userId; // replace with your actual user ID
-      await firestore()
-        .collection('conversations')
-        .doc(userId)
-        .collection('messages')
-        .add(userMessage);
-      await firestore()
-        .collection('conversations')
-        .doc(userId)
-        .collection('messages')
-        .add(botMessage);
+      setUserInput(''); // Clear the user input
     } catch (error) {
       console.error('Error sending message:', error);
+      // Optionally handle the message removal or error display
     }
   };
 
-  const sendBotMessage = async (userInput, selectedOption = null) => {
-    const message = {
-      user_id: userId,
-      text: userInput,
-    };
-    console.log(userId, userInput, 'userid ');
-
+  const fetchUserDetails = async user => {
     try {
-      const response = await axios.post(`${API_URL}/receive_message`, message);
-
-      // Add the user's message to the chat list
-      const userMessage = {
-        from_bot: false,
-        text: selectedOption || userInput,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prevMessages => [...prevMessages, userMessage]);
-
-      // Add bot's response to the chat list
-      const botMessage = {
-        from_bot: true,
-        text: response.data.response,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prevMessages => [...prevMessages, botMessage]);
-
-      // Clear the user input
-      setUserInput('');
-
-      // Save messages to Firestore within the user's 'bot_conversation'
+      const response = await fetch(`${apiUrl}/get_userDetails?user_id=${user}`);
+      const userDetails = await response.json();
+      return userDetails;
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error fetching user details:', error);
+      return null; // Return null in case of an error
+    }
+  };
+
+  const navigateChatscreen = async user => {
+    const userDetails = await fetchUserDetails(user);
+    if (userDetails) {
+      navigation.navigate('ProfileScreen', {
+        userId: userId,
+        otherUserId: user,
+        profilePic: userDetails.profilePic, // Adjust keys as per your API response
+        display_name: userDetails.display_name,
+        username: userDetails.username,
+        bio: userDetails.bio,
+      });
+    } else {
+      console.error('User details not found');
+      // Handle the case where user details are not found
     }
   };
 
@@ -210,13 +160,23 @@ const Nomi = ({navigation}) => {
   });
 
   const fetchBotConversation = async () => {
-    console.log(userId, 'userId');
     try {
       const response = await axios.get(
-        `${API_URL}/fetchBotConversation/${userId}`,
+        `${apiUrl}/fetchBotConversation/${userId}`,
       );
       const historicalMessages = response.data.messages;
-      setMessages(historicalMessages);
+
+      const formattedMessages = historicalMessages.map(item => {
+        if (item.matched_user_id && item.display_name) {
+          // Use a type property instead of storing a component
+          return {
+            ...item, // Spread the rest of the item properties
+            type: 'contactCard', // Add a type property
+          };
+        }
+        return item; // For other messages, return as is
+      });
+      setMessages(formattedMessages);
     } catch (error) {
       console.error('Error fetching bot conversation:', error);
     }
@@ -224,40 +184,58 @@ const Nomi = ({navigation}) => {
 
   // Use this in your useEffect
   useEffect(() => {
-    fetchBotConversation();
-  }, []);
+    if (apiUrl) {
+      fetchBotConversation();
+    }
+  }, [apiUrl]);
 
   return (
     <View style={styles.page}>
-      {
-        <ScrollView
-          style={{flex: 1, paddingBottom: 200}}
-          ref={scrollViewRef}
-          onContentSizeChange={() =>
-            scrollViewRef.current.scrollToEnd({animated: true})
-          }>
-          {messages.map((message, index) => {
-            if (message.from_bot) {
-              return (
+      <ScrollView
+        style={{flex: 1, paddingBottom: 200}}
+        ref={scrollViewRef}
+        onContentSizeChange={() =>
+          scrollViewRef.current.scrollToEnd({animated: true})
+        }>
+        {messages.map((message, index) => {
+          if (message.matched_user_id) {
+            return (
+              <>
                 <LeftBubble
-                  key={index}
+                  key={`leftBubble-${index}`} // Ensure unique key by appending a string
                   text={message.text}
                   timestamp={message.timestamp}
                 />
-              );
-            } else {
-              return (
-                <RightBubble
+                <ContactCard
                   key={index}
-                  text={message.text}
-                  timestamp={message.timestamp}
+                  displayName={message.display_name}
+                  onCardClick={() =>
+                    navigateChatscreen(message.matched_user_id)
+                  }
+                  logoUri={message.profilePic}
                 />
-              );
-            }
-          })}
-          <View style={{height: 70}} />
-        </ScrollView>
-      }
+              </>
+            );
+          } else if (message.from_bot && !message.matched_user_id) {
+            return (
+              <LeftBubble
+                key={index}
+                text={message.text}
+                timestamp={message.timestamp}
+              />
+            );
+          } else {
+            return (
+              <RightBubble
+                key={index}
+                text={message.text}
+                timestamp={message.timestamp}
+              />
+            );
+          }
+        })}
+        <View style={{height: 70}} />
+      </ScrollView>
 
       <View style={styles.textboxContainer}>
         <InputBox sendMessage={sendBotMessage} />

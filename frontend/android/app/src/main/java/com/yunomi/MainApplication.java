@@ -11,6 +11,7 @@ import com.facebook.soloader.SoLoader;
 import java.util.List;
 import com.swmansion.gesturehandler.RNGestureHandlerPackage;
 import com.swmansion.rnscreens.RNScreensPackage;
+import com.reactnativecommunity.blurview.BlurViewPackage;
 
 
 
@@ -31,6 +32,8 @@ public class MainApplication extends Application implements ReactApplication {
           // packages.add(new MyReactNativePackage());
     packages.add(new RNScreensPackage());
     packages.add(new com.swmansion.rnscreens.RNScreensPackage());
+    packages.add(new BlurViewPackage());
+    
 
           return packages;
         }

@@ -1,26 +1,18 @@
 import React, {useState, useEffect} from 'react';
 import LandingPage from './src/screens/landing';
 import LoginPage from './src/screens/login';
-import {Color, FontFamily, FontSize} from './globalstyles';
-import Nomi from './src/screens/nomi';
-import Chats from './src/screens/chats';
-import Feed from './src/screens/feed';
 import FrameTabsScreen from './src/screens/frametabs';
 import auth from '@react-native-firebase/auth';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {enableScreens} from 'react-native-screens';
 import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
-import 'react-native-gesture-handler';
-import {
-  Menu,
-  MenuOptions,
-  MenuOption,
-  MenuTrigger,
-  MenuProvider,
-} from 'react-native-popup-menu';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import ChatScreen from './src/screens/chatscreen';
+import ProfileScreen from './src/screens/profilescreen';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {MenuProvider} from 'react-native-popup-menu';
+import messaging from '@react-native-firebase/messaging';
+import setupForegroundMessageHandler from './src/services.jsx/notification';
 
 enableScreens();
 
@@ -30,8 +22,6 @@ const AppStack = createStackNavigator();
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
-  const [isProfile, setIsProfile] = useState(false);
-  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
   useEffect(() => {
     const subscriber = auth().onAuthStateChanged(user => {
@@ -50,24 +40,68 @@ function App() {
 
   const Tab = createMaterialTopTabNavigator();
 
+  useEffect(() => {
+    async function requestPermissionsAndGetToken() {
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (enabled) {
+        console.log('Authorization status:', authStatus);
+        const fcmToken = await messaging().getToken();
+        if (fcmToken) {
+          console.log('Your Firebase Token is:', fcmToken);
+        } else {
+          console.log('Failed to get FCM token');
+        }
+      }
+    }
+
+    requestPermissionsAndGetToken();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeFromMessaging = setupForegroundMessageHandler();
+    return () => {
+      unsubscribeFromMessaging();
+    };
+  }, []);
+
+  async function requestUserPermission() {
+    const authorizationStatus = await messaging().requestPermission();
+
+    if (authorizationStatus) {
+      console.log('Permission status:', authorizationStatus);
+    }
+  }
+  requestUserPermission();
+
   return (
-    <MenuProvider>
-      <NavigationContainer>
-        <AppStack.Navigator screenOptions={{headerShown: false}}>
-          {showLanding ? (
-            <AppStack.Screen name="Landing" component={LandingPage} />
-          ) : (
-            <>
-              <AppStack.Screen name="Login" component={LoginPage} />
-              <AppStack.Screen
-                name="FrameTabsScreen"
-                component={FrameTabsScreen}
-              />
-            </>
-          )}
-        </AppStack.Navigator>
-      </NavigationContainer>
-    </MenuProvider>
+    <GestureHandlerRootView style={{flex: 1}}>
+      <MenuProvider>
+        <NavigationContainer>
+          <AppStack.Navigator screenOptions={{headerShown: false}}>
+            {showLanding ? (
+              <AppStack.Screen name="Landing" component={LandingPage} />
+            ) : (
+              <>
+                <AppStack.Screen name="Login" component={LoginPage} />
+                <AppStack.Screen
+                  name="FrameTabsScreen"
+                  component={FrameTabsScreen}
+                />
+                <AppStack.Screen name="ChatScreen" component={ChatScreen} />
+                <AppStack.Screen
+                  name="ProfileScreen"
+                  component={ProfileScreen}
+                />
+              </>
+            )}
+          </AppStack.Navigator>
+        </NavigationContainer>
+      </MenuProvider>
+    </GestureHandlerRootView>
   );
 }
 

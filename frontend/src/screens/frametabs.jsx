@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
+import {Text, View, TouchableOpacity} from 'react-native';
 import Nomi from './nomi';
 import Chats from './chats';
 import Feed from './feed';
@@ -7,15 +8,8 @@ import auth from '@react-native-firebase/auth';
 import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
 import 'react-native-gesture-handler';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import {
-  Menu,
-  MenuOptions,
-  MenuOption,
-  MenuTrigger,
-  MenuProvider,
-} from 'react-native-popup-menu';
-import Icon from 'react-native-vector-icons/FontAwesome';
 import {createStackNavigator} from '@react-navigation/stack';
+import Topbar from '../components/Topbar';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +58,12 @@ function FrameTabsScreen({navigation}) {
     navigation.navigate('Login');
   };
 
+  const handleBuyPremium = () => {
+    // This function will handle the in-app purchase process
+    // Placeholder - Replace this with your in-app billing logic
+    console.log('Initiating premium purchase...');
+  };
+
   return (
     <Stack.Navigator>
       <Stack.Screen
@@ -82,19 +82,7 @@ function FrameTabsScreen({navigation}) {
             fontWeight: '700',
           },
           headerRight: () => (
-            <Menu>
-              <MenuTrigger>
-                <Icon
-                  name="ellipsis-v"
-                  size={20}
-                  color={Color.fCDDEC}
-                  style={{marginRight: 15}}
-                />
-              </MenuTrigger>
-              <MenuOptions>
-                <MenuOption onSelect={() => signOut()} text="Sign Out" />
-              </MenuOptions>
-            </Menu>
+            <Topbar onPressBuyPremium={handleBuyPremium} signout={signOut} />
           ),
         }}
       />

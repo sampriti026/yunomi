@@ -2,167 +2,156 @@ import React, {useState, useEffect} from 'react';
 import {
   View,
   FlatList,
-  TextInput,
   TouchableOpacity,
   Text,
   Alert,
   StyleSheet,
-  PanResponder,
+  Button,
 } from 'react-native';
 import axios from 'axios';
-import firestore from '@react-native-firebase/firestore';
-import {ListItem, Icon} from 'react-native-elements';
-import {PanGestureHandler, State} from 'react-native-gesture-handler';
-import {RightPostBubble, LeftPostBubble} from '../components/postbubbles'; // Import from your bubble components file
+import Icon from 'react-native-vector-icons/FontAwesome'; // Import the Icon component
 import InputBox from '../components/inputbox'; // Import from your InputBox component file
 import auth from '@react-native-firebase/auth';
+import PostBubble from '../components/postbubble';
+import {FeedProvider, useFeedContext} from '../FeedContext';
+import CheckBox from '@react-native-community/checkbox'; // Import CheckBox
 
-const BASE_URL = 'http://10.0.2.2:8000';
+const apiUrl = 'http://10.0.2.2:8000';
 
-const PostItem = ({item, onLike, onReply}) => (
-  <PanGestureHandler
-    onHandlerStateChange={event => {
-      if (event.nativeEvent.state === State.END) {
-        if (event.nativeEvent.translationX > 100) {
-          onReply(item);
-        }
-      }
-    }}>
-    <View style={{flexDirection: 'row', alignItems: 'center'}}>
-      <View style={{flex: 1}}>
-        <ListItem bottomDivider>
-          <ListItem.Content>
-            <ListItem.Subtitle>{`Posted by: ${item.display_name}`}</ListItem.Subtitle>
-            <ListItem.Title>{item.content}</ListItem.Title>
-            <ListItem.Subtitle>{`Posted at: ${new Date(
-              item.timestamp.toDate(),
-            ).toLocaleString()}`}</ListItem.Subtitle>
-          </ListItem.Content>
-        </ListItem>
-      </View>
-      <TouchableOpacity onPress={() => onLike(item.id, item.likes)}>
-        <Icon name="heart" type="font-awesome" color="#f50" />
-        <Text>{item.likes}</Text>
-      </TouchableOpacity>
-    </View>
-  </PanGestureHandler>
-);
-
-const PostFeed = () => {
+const Feed = () => {
   const [posts, setPosts] = useState([]);
-  const [newPostContent, setNewPostContent] = useState('');
-  const [replyTo, setReplyTo] = useState(null); // To keep track of the post the user is replying to
 
-  // useEffect(() => {
-  //   const unsubscribe = firestore()
-  //     .collection('posts')
-  //     .orderBy('timestamp', 'desc')
-  //     .onSnapshot(querySnapshot => {
-  //       const postsData = querySnapshot.docs.map(doc => {
-  //         return {id: doc.id, ...doc.data()};
-  //       });
-  //       setPosts(postsData);
-  //     });
+  const {setSwipedPost, swipedPost} = useFeedContext(); // Use context to listen to swiped post details
+  const [replyPrivately, setReplyPrivately] = useState(false);
 
-  //   return () => unsubscribe();
-  // }, []);
+  const userId = auth().currentUser ? auth().currentUser.uid : null;
 
   useEffect(() => {
-    async function fetchPosts() {
-      try {
-        const usersCollection = await firestore().collection('users').get();
-        console.log(
-          'All Users:',
-          usersCollection.docs.map(doc => doc.id),
-        ); // Log document IDs
-
-        const response = await axios.get(`${BASE_URL}/get_posts`); // Assuming you have a get_posts endpoint in backend
-        setPosts(response.data);
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-      }
-    }
+    fetchPosts();
   }, []);
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderEnd: (_, gestureState) => {
-      if (gestureState.dx > 50) {
-        // User swiped to the right, you can implement your reply functionality here.
-        // For demonstration, let's set replyTo to the last message
-        setReplyTo(posts[posts.length - 1].text);
-      }
-    },
-  });
-
-  const addNewPost = async content => {
+  const fetchPosts = async () => {
     try {
-      const user = auth().currentUser;
-      const userId = user.uid;
-      console.log(userId);
-      const userDoc = await firestore().collection('users').doc(userId).get();
-      console.log('User Document:', userDoc);
-
-      if (userDoc.exists) {
-        const postDetails = {
-          user_id: userId,
-          content: 'hello',
-          display_name: 'sampriti',
-          // profile_pic_uri: userDoc.data().Profilepicurl,
-        };
-
-        const response = await fetch(`${BASE_URL}/send_post`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(postDetails),
-        });
-
-        const result = await response.json();
-
-        if (result.status === 'success') {
-          console.log('Post added successfully');
-        } else {
-          console.error('Error adding post:', result.message);
-        }
-      } else {
-        console.error('User data not found');
-      }
+      const response = await axios.get(`${apiUrl}/fetch_posts`);
+      const postsWithLikeStatus = response.data.map(post => ({
+        ...post,
+        // Check if the current logged-in user's ID is directly in the `liked_by` array
+        isLiked: post.liked_by.includes(userId),
+      }));
+      setPosts(postsWithLikeStatus);
     } catch (error) {
-      console.error('Error while adding a post:', error.message);
+      console.error('Error fetching posts:', error);
+      Alert.alert('Error', 'Failed to fetch posts');
     }
   };
 
-  const likePost = async (postId, currentLikes) => {
-    await firestore()
-      .collection('posts')
-      .doc(postId)
-      .update({
-        likes: currentLikes + 1,
-      });
+  const renderReplyBox = () => {
+    if (!swipedPost) return null; // No swiped post, no reply box
+
+    return (
+      <View style={styles.replyBox}>
+        <View style={styles.replyContentAndCheckbox}>
+          <View style={styles.replyContent}>
+            <Text style={styles.replyDisplayName}>
+              {swipedPost.displayname}
+            </Text>
+            <Text style={styles.replyText}>{swipedPost.text}</Text>
+          </View>
+          <View style={styles.checkboxContainer}>
+            <CheckBox
+              value={replyPrivately}
+              onValueChange={setReplyPrivately}
+              tintColors={{true: '#fff', false: '#fff'}} // Customize checkbox color
+            />
+            <Text style={styles.checkboxLabel}>Reply Privately</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={() => setSwipedPost(null)}
+          style={styles.crossButton}>
+          <Icon name="times" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
-  const slideToReply = post => {
-    Alert.alert('Reply', `Replying to post: ${post.content}`);
+  const addNewPost = async content => {
+    if (!userId) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${apiUrl}/send_post`, {
+        user_id: userId,
+        content: content,
+        timestamp: new Date().toISOString(),
+        repost: false,
+        text: content, // Since this is for adding new posts, repost is false
+      });
+
+      const responseData = await response.data;
+      if (responseData.status === 'success') {
+        console.log('Post added successfully:', responseData.post_id);
+        // Optionally refresh your post list here if needed
+      } else {
+        console.error('Failed to add post:', responseData.message);
+      }
+    } catch (error) {
+      console.error('Error sending post:', error);
+    }
+  };
+
+  const sendReply = async text => {
+    if (!userId || !swipedPost) {
+      console.error('User not authenticated or no post selected for reply');
+      return;
+    }
+
+    // Assuming you fetch or have post_userId available somehow
+    const type = replyPrivately ? 'private' : 'public';
+
+    try {
+      console.log(userId, swipedPost.postId, swipedPost.post_userId);
+      const response = await axios.post(`${apiUrl}/post_reply`, {
+        user_id: userId,
+        post_id: swipedPost.postId,
+        post_user_id: swipedPost.post_userId,
+        text: text,
+        type: type,
+      });
+
+      const responseData = await response.data;
+      if (responseData.reply_id) {
+        setSwipedPost(null); // Assuming you have a method to reset this context
+        setReplyPrivately(false); // Reset to default state if applicable
+
+        // Handle success (e.g., clear the input box, update UI)
+      } else {
+        console.error('Failed to post reply:', responseData.message);
+      }
+    } catch (error) {
+      console.error('Error posting reply:', error);
+    }
   };
 
   const renderItem = ({item}) => {
     return (
-      <View {...panResponder.panHandlers}>
-        {item.isByUser ? (
-          <RightPostBubble
-            text={item.text}
-            timestamp={item.timestamp}
-            username={item.username}
-          />
-        ) : (
-          <LeftPostBubble
-            text={item.text}
-            timestamp={item.timestamp}
-            username={item.username}
-          />
-        )}
+      <View>
+        <PostBubble
+          postId={item.postId}
+          post_userId={item.post_userId}
+          displayname={item.displayname}
+          text={item.text}
+          timestamp={item.timestamp}
+          likes={item.likes}
+          isLiked={item.isLiked}
+          userLogo={{uri: item.userLogo}}
+          repost={item.repost}
+          repostedDisplayname={item.repostedDisplayname}
+          repostedUserLogo={{uri: item.repostedUserLogo}}
+          repostedTimestamp={item.repostedTimestamp} // Use URI for network images
+        />
       </View>
     );
   };
@@ -172,9 +161,11 @@ const PostFeed = () => {
       <FlatList
         data={posts}
         renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={item => item.postId}
       />
-      <InputBox sendMessage={addNewPost} />
+      {swipedPost && renderReplyBox()}
+
+      <InputBox sendMessage={swipedPost ? sendReply : addNewPost} />
     </View>
   );
 };
@@ -182,7 +173,60 @@ const PostFeed = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // dark background
+    backgroundColor: '#202020', // dark background
+  },
+  replyBox: {
+    flexDirection: 'row', // Keeps the main layout in a row
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: '#383838',
+  },
+  replyContentAndCheckbox: {
+    flex: 1, // Allows this container to take up available space, excluding the cross button
+    flexDirection: 'column', // Stacks children vertically
+  },
+  replyContent: {
+    flexDirection: 'column', // Stack children vertically within the reply content
+  },
+  replyDisplayName: {
+    color: '#fff',
+    fontSize: 20,
+    paddingLeft: 4,
+  },
+  replyText: {
+    color: '#fff',
+    padding: 4,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8, // Adds space between the text and the checkbox
+  },
+  checkboxLabel: {
+    color: '#fff',
+    marginLeft: 8,
+  },
+  crossButton: {},
+
+  fetchPostsButton: {
+    backgroundColor: '#4CAF50', // Green color for visibility
+    padding: 10,
+    margin: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+
+  fetchPostsButtonText: {
+    color: '#FFFFFF', // White text color
+    fontSize: 16,
   },
 });
-export default PostFeed;
+
+const FeedWithProvider = () => (
+  <FeedProvider>
+    <Feed />
+  </FeedProvider>
+);
+
+export default FeedWithProvider;
