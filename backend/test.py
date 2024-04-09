@@ -29,3 +29,4 @@ def check_token_validity(fcm_token):
 # Replace 'your_fcm_token_here' with the actual FCM token you want to check.
 is_valid = check_token_validity('dfuPDyPxTgyR6pku1syjUn:APA91bGSAIzZktG81nVJCO6cakgrWKIQp7pRoo4CJ6vfbcY18r4Iy47CLvGI8gDlFiz2imm1ISA3yDWRacwCpqeSkxzZMTqnnzXU1MGzv8D98qzWOqyp1B8AzELEAxXactMVhzm3JYEp')
 print('Token is valid:', is_valid)
+

@@ -13,6 +13,9 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {MenuProvider} from 'react-native-popup-menu';
 import messaging from '@react-native-firebase/messaging';
 import setupForegroundMessageHandler from './src/services.jsx/notification';
+import * as RNIap from 'react-native-iap';
+import {generateAndSaveKey} from './src/services.jsx/encrypt';
+import 'react-native-get-random-values';
 
 enableScreens();
 
@@ -30,7 +33,7 @@ function App() {
 
     const timer = setTimeout(() => {
       setShowLanding(false);
-    }, 30);
+    }, 3000);
 
     return () => {
       subscriber();
@@ -76,6 +79,26 @@ function App() {
     }
   }
   requestUserPermission();
+
+  useEffect(() => {
+    async function initIAP() {
+      try {
+        await RNIap.initConnection();
+        console.log('IAP connection is initialized.');
+        await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
+      } catch (err) {
+        console.warn('IAP init error:', err);
+      }
+      await generateAndSaveKey();
+
+      return () => {
+        RNIap.endConnection(); // Correct usage
+        console.log('IAP connection is closed.');
+      };
+    }
+
+    initIAP();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{flex: 1}}>

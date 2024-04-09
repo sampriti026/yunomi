@@ -18,7 +18,15 @@
           "client_type": 1,
           "android_info": {
             "package_name": "com.yunomi",
-            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+            "certificate_hash": "4d6aead86de012452484201bbb18318c7c3164e5"
+          }
+        },
+        {
+          "client_id": "173733886535-jhcnm1advfr4u8ue6089qq4d0u4ut8ln.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yunomi",
+            "certificate_hash": "3c9747cb4101ccfad8082de73271060e032f5407"
           }
         },
         {

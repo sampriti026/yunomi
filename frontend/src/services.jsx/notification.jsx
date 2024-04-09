@@ -3,7 +3,7 @@ import {showNotification} from './showNotification';
 import {getActiveChatId} from '../components/storage';
 
 const setupForegroundMessageHandler = () => {
-  messaging().onMessage(async remoteMessage => {
+  const unsubscribe = messaging().onMessage(async remoteMessage => {
     const notificationData = remoteMessage.data;
     const activeChatId = await getActiveChatId();
     console.log('setupforeground called', notificationData);
@@ -24,6 +24,8 @@ const setupForegroundMessageHandler = () => {
       notificationData.profilePic,
     );
   });
+
+  return unsubscribe;
 };
 
 export default setupForegroundMessageHandler;

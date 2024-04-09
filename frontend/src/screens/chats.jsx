@@ -34,7 +34,6 @@ function Chats({navigation}) {
   return (
     <View style={styles.page}>
       <ChatsList userId={userId} onChatSelect={handleChatSelect} />
-      {/* You can remove the FlatList here if ChatsList is now handling the display of chats */}
     </View>
   );
 }

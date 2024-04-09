@@ -19,6 +19,50 @@ const formatTimestamp = isoTimestamp => {
   return `${formattedHours}:${formattedMinutes} ${amOrPm}`;
 };
 
+// const formatTimestamp = isoTimestamp => {
+//   const postDate = new Date(isoTimestamp);
+//   const now = new Date();
+//   const diffMs = now - postDate; // milliseconds difference
+//   const diffMins = Math.round(diffMs / 60000); // minutes difference
+//   const diffHours = Math.round(diffMs / 3600000); // hours difference
+//   const diffDays = Math.round(diffMs / 86400000); // days difference
+
+//   if (diffMins < 60) {
+//     return `${diffMins}m`;
+//   } else if (diffHours < 24) {
+//     return `${diffHours}h`;
+//   } else {
+//     // Format the date as "Feb 8"
+//     const monthNames = [
+//       'Jan',
+//       'Feb',
+//       'Mar',
+//       'Apr',
+//       'May',
+//       'Jun',
+//       'Jul',
+//       'Aug',
+//       'Sep',
+//       'Oct',
+//       'Nov',
+//       'Dec',
+//     ];
+//     const date = postDate.getDate();
+//     const monthIndex = postDate.getMonth();
+//     const year = postDate.getFullYear();
+//     const currentYear = now.getFullYear();
+
+//     // Use substring to get the last two digits of the year
+//     const yearShortForm = year.toString().substring(2);
+
+//     // If the post was made in a different year, include the year in the format.
+//     if (year < currentYear) {
+//       return `${monthNames[monthIndex]} ${date}, '${yearShortForm}`;
+//     }
+//     return `${monthNames[monthIndex]} ${date}`;
+//   }
+// };
+
 const RightBubble = ({text, timestamp}) => (
   <View style={styles.rightContainer}>
     <View style={styles.rightBubble}>

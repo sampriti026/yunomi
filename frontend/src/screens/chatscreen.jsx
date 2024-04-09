@@ -16,7 +16,8 @@ import auth from '@react-native-firebase/auth';
 import DeviceInfo from 'react-native-device-info';
 import {Animated} from 'react-native';
 import {setActiveChatId, removeActiveChatId} from '../components/storage';
-
+import {encryptMessage, decryptMessage} from '../services.jsx/encrypt';
+import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 const ChatScreen = ({navigation, route}) => {
@@ -57,15 +58,16 @@ const ChatScreen = ({navigation, route}) => {
     initializeApiUrl();
   }, []);
 
-  const fetchUserDetails = async user => {
-    try {
-      const response = await fetch(`${apiUrl}/get_userDetails?user_id=${user}`);
-      const userDetails = await response.json();
-      return userDetails;
-    } catch (error) {
-      console.error('Error fetching user details:', error);
-      return null; // Return null in case of an error
+  const fetchUserDetails = async participantId => {
+    // Placeholder function to fetch user details from Firestore
+    const userDoc = await firestore()
+      .collection('users')
+      .doc(participantId)
+      .get();
+    if (userDoc.exists) {
+      return {userId: participantId, ...userDoc.data()}; // Include additional user details as needed
     }
+    return null;
   };
 
   const swipeableRefs = useRef({});
@@ -73,7 +75,6 @@ const ChatScreen = ({navigation, route}) => {
   useEffect(() => {
     // Fetch other user's details
     const fetchDetails = async () => {
-      if (!apiUrl) return;
       const userDetails = await fetchUserDetails(userId);
       if (userDetails) {
         setUserDetails(userDetails);
@@ -86,27 +87,29 @@ const ChatScreen = ({navigation, route}) => {
     fetchDetails();
   }, [userId, apiUrl]);
 
-  useEffect(() => {
-    // Set active chat ID when the screen is focused
-    const focusListener = navigation.addListener('focus', () => {
-      setActiveChatId(conversationId);
-    });
+  // useEffect(() => {
+  //   // Set active chat ID when the screen is focused
+  //   const focusListener = navigation.addListener('focus', () => {
+  //     setActiveChatId(conversationId);
+  //   });
 
-    // Remove active chat ID when the screen is blurred (navigated away from)
-    const blurListener = navigation.addListener('blur', () => {
-      removeActiveChatId();
-    });
+  //   // Remove active chat ID when the screen is blurred (navigated away from)
+  //   const blurListener = navigation.addListener('blur', () => {
+  //     removeActiveChatId();
+  //   });
 
-    return () => {
-      // Cleanup listeners when the component is unmounted or when navigation state changes
-      navigation.removeListener('focus', focusListener);
-      navigation.removeListener('blur', blurListener);
-    };
-  }, [navigation, conversationId]);
+  //   return () => {
+  //     // Cleanup listeners when the component is unmounted or when navigation state changes
+  //     navigation.removeListener('focus', focusListener);
+  //     navigation.removeListener('blur', blurListener);
+  //   };
+  // }, [navigation, conversationId]);
 
   useEffect(() => {
     // Fetch chat history
+    console.log('again');
     const fetchChatHistory = async () => {
+      console.log('calllled');
       try {
         if (!apiUrl || !conversationId) return;
         const response = await fetch(
@@ -115,7 +118,20 @@ const ChatScreen = ({navigation, route}) => {
         const data = await response.json();
 
         if (data.status === 'success') {
-          setMessages(data.messages);
+          let decryptedMessages = data.messages.reverse();
+
+          if (isPrivate) {
+            // Decrypt messages if isPrivate is true
+            decryptedMessages = decryptedMessages.map(message => {
+              return {
+                ...message,
+                text: decryptMessage(message.text), // Assuming decryptMessage function is defined elsewhere
+              };
+            });
+            console.log('PRIVATEEE', decryptedMessages);
+          }
+
+          setMessages(decryptedMessages);
         } else {
           console.error(data.message);
         }
@@ -123,8 +139,9 @@ const ChatScreen = ({navigation, route}) => {
         console.error('Error fetching chat history:', error);
       }
     };
+
     fetchChatHistory();
-  }, [conversationId, apiUrl]);
+  }, [apiUrl, conversationId, isPrivate]);
 
   useEffect(() => {
     const backAction = () => {
@@ -149,6 +166,8 @@ const ChatScreen = ({navigation, route}) => {
   const sendMessage = async text => {
     try {
       console.log(text, userId, otherUserId, conversationId);
+      encryptedText = encryptMessage(text);
+
       const response = await fetch(`${apiUrl}/send_message`, {
         method: 'POST',
         headers: {
@@ -157,7 +176,7 @@ const ChatScreen = ({navigation, route}) => {
         body: JSON.stringify({
           sender_id: userId,
           receiver_id: otherUserId,
-          text: text,
+          text: isPrivate ? encryptedText : text,
           conversation_id: conversationId,
           is_private: isPrivate,
         }),
@@ -260,7 +279,6 @@ const ChatScreen = ({navigation, route}) => {
   const navigateToProfile = async user => {
     const userDetails = await fetchUserDetails(user);
     if (userDetails) {
-      console.log(userDetails, 'userDetails');
       navigation.navigate('ProfileScreen', {
         userId: user,
         profilePic: userDetails.profilePic, // Adjust keys as per your API response
@@ -280,10 +298,7 @@ const ChatScreen = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.topBarSection}
           onPress={() => navigateToProfile(otherUserId)}>
-          <Image
-            source={{uri: profilePic || 'https://via.placeholder.com/150'}}
-            style={styles.profilePhoto}
-          />
+          <Image source={{uri: profilePic}} style={styles.profilePhoto} />
           <Text style={styles.profileName}>{display_name}</Text>
         </TouchableOpacity>
 
@@ -306,6 +321,7 @@ const ChatScreen = ({navigation, route}) => {
       <FlatList
         data={messages}
         keyExtractor={(item, index) => index.toString()}
+        inverted
         renderItem={({item}) => (
           <Swipeable
             ref={ref => (swipeableRefs.current[item.message_id] = ref)}

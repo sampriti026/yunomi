@@ -1,15 +1,10 @@
 // ChatsList.js
 import React, {useState, useEffect} from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import Icon from react-native-vector-icons
+import firestore from '@react-native-firebase/firestore';
+import {decryptMessage} from '../services.jsx/encrypt';
 
 const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
   const [chats, setChats] = useState([]);
@@ -31,41 +26,66 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
     initializeApiUrl();
   }, []);
 
-  useEffect(() => {
-    const fetchChats = async () => {
-      if (!apiUrl) return;
-      try {
-        const response = await fetch(
-          `${apiUrl}/get_chatlist?user_id=${userId}`,
-        );
-        const data = await response.json();
-        if (data && data.length > 0) {
-          let filteredChats = data;
-          // If viewing someone else's profile, filter out private chats
-          if (viewOnlyPublic) {
-            filteredChats = data.filter(chat => !chat.is_private);
-          }
-          setChats(filteredChats);
-        }
-      } catch (error) {
-        console.error('Error fetching chats:', error);
-      }
-    };
+  const fetchUserDetails = async participantId => {
+    // Placeholder function to fetch user details from Firestore
+    const userDoc = await firestore()
+      .collection('users')
+      .doc(participantId)
+      .get();
+    if (userDoc.exists) {
+      return {userId: participantId, ...userDoc.data()}; // Include additional user details as needed
+    }
+    return null;
+  };
 
-    fetchChats();
-  }, [userId, apiUrl]);
+  useEffect(() => {
+    const unsubscribe = firestore()
+      .collection('conversations')
+      .where('participants', 'array-contains', userId)
+      .orderBy('last_updated', 'desc')
+      .onSnapshot(async querySnapshot => {
+        const chatsPromises = querySnapshot.docs.map(async doc => {
+          const data = doc.data();
+          const participantDetails = await Promise.all(
+            data.participants.map(fetchUserDetails),
+          );
+
+          // Assuming `last_message` is encrypted and needs decryption for private chats
+          return {
+            conversation_id: doc.id,
+            last_message: data.is_private
+              ? decryptMessage(data.last_message)
+              : data.last_message,
+            last_updated: data.last_updated,
+            participants: participantDetails.filter(Boolean), // Remove any nulls
+            is_private: data.is_private,
+          };
+        });
+
+        const updatedChats = await Promise.all(chatsPromises);
+        setChats(updatedChats);
+      });
+
+    return () => unsubscribe();
+  }, [userId]);
 
   return (
     <View>
       {chats.map(chat => {
-        const otherUser = chat.participants.find(p => p.user_id !== userId);
+        const otherUser = chat.participants.find(p => p.userId !== userId);
         const isPrivate = chat.is_private;
+        let chatLastMessage; // Declare variable without initial value
+        if (isPrivate) {
+          chatLastMessage = decryptMessage(chat.last_message);
+        } else {
+          chatLastMessage = chat.last_message; // Directly use chat.chatLastMessage if not private
+        }
         return (
           <TouchableOpacity
             key={chat.conversation_id}
             onPress={() =>
               onChatSelect(
-                otherUser.user_id,
+                otherUser.userId,
                 otherUser.display_name,
                 otherUser.username,
                 otherUser.profilePic,
@@ -87,7 +107,7 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
               <View style={styles.chatTextContainer}>
                 <Text style={styles.chatName}>{otherUser.display_name}</Text>
                 <Text style={styles.chatUsername}>@{otherUser.username}</Text>
-                <Text style={styles.chatLastMessage}>{chat.last_message}</Text>
+                <Text style={styles.chatLastMessage}>{chatLastMessage}</Text>
                 {chat.is_private && (
                   <Icon
                     name="lock"

@@ -9,15 +9,6 @@ import axios from 'axios';
 import {Animated} from 'react-native';
 
 const formatTimestamp = isoTimestamp => {
-  const date = new Date(isoTimestamp);
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-  const amOrPm = hours >= 12 ? 'PM' : 'AM';
-  const formattedHours = hours % 12 || 12;
-  return `${formattedHours}:${formattedMinutes} ${amOrPm}`;
-};
-const formatTwitterStyleTimestamp = isoTimestamp => {
   const postDate = new Date(isoTimestamp);
   const now = new Date();
   const diffMs = now - postDate; // milliseconds difference
@@ -184,9 +175,7 @@ const PostBubble = ({
             <Text style={styles.text}>{text}</Text>
             {/* Conditionally use repostedTimestamp or timestamp based on repost status */}
             <Text style={styles.timestampInsideBubble}>
-              {formatTwitterStyleTimestamp(
-                repost ? repostedTimestamp : timestamp,
-              )}
+              {formatTimestamp(repost ? repostedTimestamp : timestamp)}
             </Text>
           </View>
         </Swipeable>
@@ -206,7 +195,7 @@ const PostBubble = ({
           <Text style={styles.likeText}>{likes}</Text>
           {/* Always use the original timestamp in the footer */}
           <Text style={styles.timestamp}>
-            {'posted at ' + formatTwitterStyleTimestamp(timestamp)}
+            {'posted at ' + formatTimestamp(timestamp)}
           </Text>
         </View>
       </View>

@@ -223,9 +223,9 @@ async def get_conversation_id(user1: str, user2: str):
     return None
 
 
+
 async def send_message(request):
     # Encrypt text if the message is private
-    text_to_save = encrypt_text(request.text, key) if request.is_private else request.text
     # Check for existing conversation or conditions for a new one
     if request.conversation_id is None:
         if request.is_private and not await check_weekly_limit(request.sender_id, request.receiver_id):
@@ -234,7 +234,7 @@ async def send_message(request):
         conversation_ref.set({
             'participants': [request.sender_id, request.receiver_id],
             'is_private': request.is_private,
-            'last_message': text_to_save,
+            'last_message': request.text,
             'last_updated': datetime.utcnow(),
         })
         conversation_id = conversation_ref.id
@@ -242,7 +242,7 @@ async def send_message(request):
         conversation_ref = db.collection('conversations').document(request.conversation_id)
         conversation_ref.update({
             'last_updated': datetime.utcnow(),
-            'last_message': text_to_save,
+            'last_message': request.text,
         })
         conversation_id = request.conversation_id
     # Get receiver details
@@ -268,7 +268,7 @@ async def send_message(request):
     conversation_messages_ref = db.collection('conversations').document(conversation_id).collection('messages')
     conversation_messages_ref.add({
         'user_id': request.sender_id,
-        'text': text_to_save,
+        'text': request.text,
         'from_bot': False,
         'timestamp': datetime.utcnow(),
     })
@@ -333,8 +333,6 @@ async def get_chat_history(conversationId, isPrivate):
             message_data['message_id'] = message.id
 
             # Decrypt text if the conversation is private
-            if isPrivate:
-                message_data['text'] = decrypt_text(message_data['text'], key)
 
             messages.append(message_data)
 
@@ -354,7 +352,7 @@ async def get_chat_history(conversationId, isPrivate):
     
 def get_conversations(user_id: str) -> List[dict]:
     conversations_ref = db.collection('conversations')
-    conversations_query = conversations_ref.where('participants', 'array_contains', user_id)
+    conversations_query = conversations_ref.where('participants', 'array_contains', user_id).order_by('last_updated', direction=firestore.Query.DESCENDING)
     conversations_snapshot = conversations_query.get()
 
     conversations = []
@@ -372,11 +370,11 @@ def get_conversations(user_id: str) -> List[dict]:
         # Fetch additional details like user names, images, etc.
         participant_details = []
         for participant in participants:
-            if participant != user_id:
-                user_details = get_user_details(participant)
-                if user_details:
-                    user_details['user_id'] = participant  # Append the user_id to the user details
-                    participant_details.append(user_details)
+            user_details = get_user_details(participant)  # Assuming this function exists and works as intended
+            if user_details:
+                user_details['user_id'] = participant
+                participant_details.append(user_details)
+
 
         conversation_info = {
             'conversation_id': conversation.id,
@@ -386,6 +384,7 @@ def get_conversations(user_id: str) -> List[dict]:
             'is_private': is_private
         }
         conversations.append(conversation_info)
+    print(conversations)
 
     return conversations
 
@@ -615,5 +614,4 @@ async def fetch_conversation_history(conversation_id, limit=10):
     conversation_context = "\n".join(
         [f"{'Bot' if msg.to_dict().get('from_bot') else 'User'}: {msg.to_dict().get('text')}" for msg in messages]
     )
-    print('conversation_history was called')
     return conversation_context

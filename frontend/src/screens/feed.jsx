@@ -6,7 +6,6 @@ import {
   Text,
   Alert,
   StyleSheet,
-  Button,
 } from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import the Icon component
