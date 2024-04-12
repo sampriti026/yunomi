@@ -68,7 +68,7 @@ def check_user_exists(google_user_id: str):
     return JSONResponse(content={"user_exists": user_exists}, status_code=200)
 
 
-def get_user_details(user_id: str) -> dict:
+async def get_user_details(user_id: str) -> dict:
     """
     Fetches user details given a user ID.
     """

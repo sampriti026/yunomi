@@ -1,4 +1,3 @@
-from datetime import datetime
 import openai
 from dependencies import db
 from services.common_service import find_top_matching_users, generate_text
@@ -11,6 +10,8 @@ from models import Query
 from encrypt import encrypt_text, load_key, decrypt_text
 from datetime import datetime, timedelta
 from services.notif_service import send_fcm_notification
+from datetime import datetime, timezone
+
 
 
 
@@ -138,7 +139,7 @@ async def receive_message(message):
     responses = []
     # Fetch and format user details for matched users
     for user_id, _ in matched_users:
-        user_detail = get_user_details(user_id)
+        user_detail = await get_user_details(user_id)
         if user_detail:
             # Format the response with user details
             response = {
@@ -227,6 +228,7 @@ async def get_conversation_id(user1: str, user2: str):
 async def send_message(request):
     # Encrypt text if the message is private
     # Check for existing conversation or conditions for a new one
+    print(request)
     if request.conversation_id is None:
         if request.is_private and not await check_weekly_limit(request.sender_id, request.receiver_id):
             raise HTTPException(status_code=400, detail="Cannot start a new conversation due to restrictions.")
@@ -246,7 +248,7 @@ async def send_message(request):
         })
         conversation_id = request.conversation_id
     # Get receiver details
-    receiver_details = get_user_details(request.receiver_id)
+    receiver_details = await get_user_details(request.receiver_id)
     receiver_token=receiver_details.get('fcm_token')
     print(receiver_token, "receiver_token")
 
@@ -278,8 +280,9 @@ async def send_message(request):
 
 
 async def check_weekly_limit(sender_id, receiver_id):
+    print(sender_id, receiver_id)
     sender_details = await get_user_details(sender_id)
-
+    
     # Check mutual likes
     if receiver_id in sender_details.get('user_likes', []):
         receiver_details = await get_user_details(receiver_id)
@@ -292,7 +295,8 @@ async def check_weekly_limit(sender_id, receiver_id):
 
     # Check the weekly message quota
     last_reset = sender_details.get('last_message_reset')
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc)
+
     if last_reset is None or (current_time - last_reset) > timedelta(days=7):
         # Reset the message count if a week has passed
         await update_weekly_count(sender_id, 0)  # Assuming this resets the count and last_reset time
@@ -306,12 +310,12 @@ async def check_weekly_limit(sender_id, receiver_id):
 
     return False
 
-async def update_weekly_count(user_id):
+async def update_weekly_count(user_id, message_count):
     # Update the user's last_message_reset to the current date/time and reset message_count
     try:
         await db.collection('users').document(user_id).update({
             'last_message_reset': datetime.utcnow(),
-            'message_count': 0
+            'message_count': message_count
         })
         print(f"Updated weekly count for {user_id}")
     except Exception as e:
@@ -350,7 +354,7 @@ async def get_chat_history(conversationId, isPrivate):
         }
 
     
-def get_conversations(user_id: str) -> List[dict]:
+async def get_conversations(user_id: str) -> List[dict]:
     conversations_ref = db.collection('conversations')
     conversations_query = conversations_ref.where('participants', 'array_contains', user_id).order_by('last_updated', direction=firestore.Query.DESCENDING)
     conversations_snapshot = conversations_query.get()
@@ -370,7 +374,7 @@ def get_conversations(user_id: str) -> List[dict]:
         # Fetch additional details like user names, images, etc.
         participant_details = []
         for participant in participants:
-            user_details = get_user_details(participant)  # Assuming this function exists and works as intended
+            user_details = await get_user_details(participant)  # Assuming this function exists and works as intended
             if user_details:
                 user_details['user_id'] = participant
                 participant_details.append(user_details)

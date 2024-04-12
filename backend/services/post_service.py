@@ -120,7 +120,7 @@ async def fetch_posts():
             post_userId = post_data['user_id']
             
 
-            user_details = get_user_details(post_data['user_id'])
+            user_details = await get_user_details(post_data['user_id'])
             
             if post_data.get('repost'):
                 # Adjusted path to fetch the original post from the messages subcollection of conversations
@@ -130,7 +130,7 @@ async def fetch_posts():
                 original_message = message_ref.get()
                 if original_message.exists:
                     original_message_data = original_message.to_dict()
-                    reposted_user_details = get_user_details(original_message_data['user_id'])
+                    reposted_user_details = await get_user_details(original_message_data['user_id'])
                     
                     # Append the fetched data to the result list
                     result.append({

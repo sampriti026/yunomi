@@ -11,10 +11,12 @@ router = APIRouter()
 @router.post("/send_notification/")
 async def send_notification(request: NotificationRequest):
     try:
+        content = "You have a private message" if request.isPrivate else request.content
+        print(content, "content")
         notif_service.send_fcm_notification(
             receiver_token=request.receiver_token,
             display_name=request.display_name,
-            content=request.content,
+            content=content,
             profilePic=request.profilePic,
             conversation_id=request.conversation_id,
             sender_id=request.sender_id

@@ -51,12 +51,9 @@ function App() {
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
       if (enabled) {
-        console.log('Authorization status:', authStatus);
         const fcmToken = await messaging().getToken();
         if (fcmToken) {
-          console.log('Your Firebase Token is:', fcmToken);
         } else {
-          console.log('Failed to get FCM token');
         }
       }
     }
@@ -84,16 +81,13 @@ function App() {
     async function initIAP() {
       try {
         await RNIap.initConnection();
-        console.log('IAP connection is initialized.');
         await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
       } catch (err) {
         console.warn('IAP init error:', err);
       }
-      await generateAndSaveKey();
 
       return () => {
         RNIap.endConnection(); // Correct usage
-        console.log('IAP connection is closed.');
       };
     }
 

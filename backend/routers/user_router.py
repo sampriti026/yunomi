@@ -33,7 +33,7 @@ async def check_user_exists(google_user_id: str):
 
 @router.get("/get_userDetails")
 async def get_user_details(user_id: str):
-    return user_services.get_user_details(user_id)
+    return await user_services.get_user_details(user_id)
 
 @router.put("/update_fcm_token/{firebase_uid}/")
 async def update_fcm_token(firebase_uid: str, request: FcmTokenUpdateRequest):

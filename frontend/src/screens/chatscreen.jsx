@@ -16,24 +16,26 @@ import auth from '@react-native-firebase/auth';
 import DeviceInfo from 'react-native-device-info';
 import {Animated} from 'react-native';
 import {setActiveChatId, removeActiveChatId} from '../components/storage';
-import {encryptMessage, decryptMessage} from '../services.jsx/encrypt';
+import {encryptAndCombine, decryptCombined} from '../services.jsx/encrypt';
 import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import {convertToRGBA} from 'react-native-reanimated';
+import {useIsFocused} from '@react-navigation/native';
 
 const ChatScreen = ({navigation, route}) => {
+  const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
+
   const {
     userId,
     otherUserId,
     profilePic,
     display_name,
-    username,
-    bio,
+
     isPrivate,
     conversationId,
   } = route.params;
   const [messages, setMessages] = useState([]);
   const [userDetails, setUserDetails] = useState(null);
-  const [apiUrl, setApiUrl] = useState('');
   const [postedMessageIds, setPostedMessageIds] = useState({}); // New state to track posted messages
 
   // Get the currently logged-in user's ID
@@ -45,18 +47,7 @@ const ChatScreen = ({navigation, route}) => {
   async function isEmulator() {
     return await DeviceInfo.isEmulator();
   }
-
-  useEffect(() => {
-    const initializeApiUrl = async () => {
-      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
-      const API_URL_DEVICE = 'http://192.168.0.104';
-
-      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
-      setApiUrl(url); // Set the state
-    };
-
-    initializeApiUrl();
-  }, []);
+  const apiUrl = 'http://10.0.2.2:8000';
 
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
@@ -83,9 +74,95 @@ const ChatScreen = ({navigation, route}) => {
         // Handle the case where other user details are not found
       }
     };
-
     fetchDetails();
   }, [userId, apiUrl]);
+
+  useEffect(() => {
+    console.log('called');
+    if (!isFocused) return; // Check if the screen is focused and conversationId is valid
+
+    console.log('ChatScreen is focused and conversationId is:', conversationId);
+    console.log(conversationId, 'conversationId');
+    // Define the fetchConversation function to get the conversation details and set up the listener
+    const fetchConversation = async () => {
+      const conversationDoc = await firestore()
+        .collection('conversations')
+        .doc(conversationId)
+        .get();
+
+      if (!conversationDoc.exists) {
+        console.error('Conversation not found');
+        return;
+      }
+
+      const {is_private} = conversationDoc.data(); // Retrieve the isPrivate flag
+
+      // Set up the listener for the messages subcollection
+      return firestore()
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .orderBy('timestamp')
+        .onSnapshot(
+          async snapshot => {
+            const updates = snapshot.docs.map(async doc => {
+              const messageData = doc.data();
+              const convertedTimestamp = messageData.timestamp.toDate(); // Convert Firestore Timestamp to JavaScript Date
+
+              if (is_private) {
+                return decryptCombined(messageData.text)
+                  .then(decryptedText => {
+                    return {
+                      ...messageData,
+                      text: decryptedText,
+                      key: doc.id,
+                      timestamp: convertedTimestamp,
+                    };
+                  })
+                  .catch(error => {
+                    console.error(
+                      'Decryption failed for message:',
+                      doc.id,
+                      error,
+                      messageData.text,
+                    );
+                    return {
+                      ...messageData,
+                      text: '[Decryption failed]',
+                      key: doc.id,
+                    };
+                  });
+              } else {
+                return Promise.resolve({...messageData, key: doc.id});
+              }
+            });
+
+            const fetchedMessages = await Promise.all(updates);
+            setMessages(
+              fetchedMessages.sort((a, b) => b.timestamp - a.timestamp),
+            );
+          },
+          error => {
+            console.error('Error fetching messages:', error);
+          },
+        );
+    };
+    let unsubscribeConversation;
+    fetchConversation()
+      .then(unsubscribe => {
+        unsubscribeConversation = unsubscribe;
+      })
+      .catch(error => {
+        console.error('Failed to set up conversation listener:', error);
+      });
+
+    // Cleanup function
+    return () => {
+      if (unsubscribeConversation) {
+        unsubscribeConversation();
+      }
+    };
+  }, [conversationId]);
 
   // useEffect(() => {
   //   // Set active chat ID when the screen is focused
@@ -104,44 +181,6 @@ const ChatScreen = ({navigation, route}) => {
   //     navigation.removeListener('blur', blurListener);
   //   };
   // }, [navigation, conversationId]);
-
-  useEffect(() => {
-    // Fetch chat history
-    console.log('again');
-    const fetchChatHistory = async () => {
-      console.log('calllled');
-      try {
-        if (!apiUrl || !conversationId) return;
-        const response = await fetch(
-          `${apiUrl}/get_chat_history?conversationId=${conversationId}&isPrivate=${isPrivate}`,
-        );
-        const data = await response.json();
-
-        if (data.status === 'success') {
-          let decryptedMessages = data.messages.reverse();
-
-          if (isPrivate) {
-            // Decrypt messages if isPrivate is true
-            decryptedMessages = decryptedMessages.map(message => {
-              return {
-                ...message,
-                text: decryptMessage(message.text), // Assuming decryptMessage function is defined elsewhere
-              };
-            });
-            console.log('PRIVATEEE', decryptedMessages);
-          }
-
-          setMessages(decryptedMessages);
-        } else {
-          console.error(data.message);
-        }
-      } catch (error) {
-        console.error('Error fetching chat history:', error);
-      }
-    };
-
-    fetchChatHistory();
-  }, [apiUrl, conversationId, isPrivate]);
 
   useEffect(() => {
     const backAction = () => {
@@ -164,10 +203,10 @@ const ChatScreen = ({navigation, route}) => {
   }, [conversationId]);
 
   const sendMessage = async text => {
-    try {
-      console.log(text, userId, otherUserId, conversationId);
-      encryptedText = encryptMessage(text);
+    //lGKQ1fkiRQu9BjF3AwfFM/UmI82sAmxa:e8ICPNFCdpbhxvc+qQmHjmMQ+Nvb
+    encryptedText = await encryptAndCombine(text);
 
+    try {
       const response = await fetch(`${apiUrl}/send_message`, {
         method: 'POST',
         headers: {
@@ -181,11 +220,8 @@ const ChatScreen = ({navigation, route}) => {
           is_private: isPrivate,
         }),
       });
-
-      // Assuming the response is JSON.
-      const responseData = await response.json(); // Directly parse the response as JSON
-      console.log(responseData, 'responseData'); // Log the parsed response data
-
+      const responseData = await response.json();
+      console.log(responseData, 'responseData'); // Directly parse the response as JSON
       if (responseData.status === 'success') {
         // Update the messages state to include the new message
         setMessages(prevMessages => [
@@ -241,7 +277,6 @@ const ChatScreen = ({navigation, route}) => {
   const onMessageSwipe = async messageId => {
     swipeableRefs.current[messageId]?.close();
     try {
-      console.log(messageId, 'messageId');
       const response = await fetch(`${apiUrl}/send_post`, {
         method: 'POST',
         headers: {
@@ -258,7 +293,6 @@ const ChatScreen = ({navigation, route}) => {
 
       const responseData = await response.json();
       if (responseData.status === 'success') {
-        console.log('Message posted successfully');
         setPostedMessageIds(prevState => ({
           ...prevState,
           [messageId]: 'success',
@@ -335,7 +369,6 @@ const ChatScreen = ({navigation, route}) => {
             onSwipeableOpen={direction => {
               if (direction === 'right') {
                 onMessageSwipe(item.message_id);
-                console.log('swiped left');
               }
             }}
             overshootLeft={false}
