@@ -3,11 +3,12 @@ import {View, StyleSheet} from 'react-native';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
 import ChatsList from '../components/chatlist';
 import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 
 function Chats({navigation}) {
   const userId = auth().currentUser ? auth().currentUser.uid : null;
 
-  const handleChatSelect = (
+  const handleChatSelect = async (
     otherUserId,
     display_name,
     username,
@@ -28,6 +29,13 @@ function Chats({navigation}) {
       bio,
       isPrivate,
       conversationId,
+    });
+
+    const conversationRef = firestore()
+      .collection('conversations')
+      .doc(conversationId);
+    await conversationRef.update({
+      [`lastRead.${userId}`]: firestore.FieldValue.serverTimestamp(),
     });
   };
 

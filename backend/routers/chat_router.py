@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from models import Message, Post, SendMessageRequest, ConversationRequest
-from services import chat_service, post_service, message_service
+from services import chat_service, post_service, message_service, ai
 
 router = APIRouter()
 
@@ -58,5 +58,11 @@ async def get_chat_history(conversationId: str, isPrivate: bool):
 @router.get("/get_chatlist")
 async def get_conversations(user_id: str):
     return message_service.get_conversations(user_id)
+
+@router.post("/generate-summary")
+async def generate_summary():
+    return ai.scheduled_function()
+
+
 
 

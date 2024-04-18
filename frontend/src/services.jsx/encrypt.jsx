@@ -68,6 +68,7 @@ export const decryptMessage = async (box, nonce, keyUint8) => {
 export const decryptCombined = async combined => {
   const [nonce, box] = combined.split(':'); // Split by the same delimiter used in encryptAndCombine
   const keyUint8 = await loadKey();
+  console.log(keyUint8);
 
   if (!keyUint8) {
     console.error('Key loading failed or returned undefined.');

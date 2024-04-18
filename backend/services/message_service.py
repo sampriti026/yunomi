@@ -1,4 +1,3 @@
-import openai
 from dependencies import db
 from services.common_service import find_top_matching_users, generate_text
 from services.user_services import get_user_details
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 key = load_key("key.key")
 
 
-openai.api_key = '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'
 
 previous_messages = []
 

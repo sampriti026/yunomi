@@ -44,6 +44,7 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
       .collection('conversations')
       .where('participants', 'array-contains', userId)
       .orderBy('last_updated', 'desc');
+    console.log(query, 'updatedChats');
 
     const filteredQuery = viewOnlyPublic
       ? query.where('is_private', '==', false)
@@ -52,6 +53,13 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
     const unsubscribe = filteredQuery.onSnapshot(async querySnapshot => {
       const chatsPromises = querySnapshot.docs.map(async doc => {
         const data = doc.data();
+
+        const lastReadTime =
+          data.lastRead && data.lastRead[userId]
+            ? data.lastRead[userId].toDate()
+            : new Date(0); // Convert Firestore timestamp to Date
+        const lastUpdatedTime = data.last_updated.toDate(); // Also convert this to Date
+
         const participantDetails = await Promise.all(
           data.participants.map(fetchUserDetails),
         );
@@ -65,10 +73,12 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
           last_updated: data.last_updated,
           participants: participantDetails.filter(Boolean),
           is_private: data.is_private,
+          unread: lastUpdatedTime > lastReadTime,
         };
       });
 
       const updatedChats = await Promise.all(chatsPromises);
+      console.log(updatedChats, 'updatedChats');
       setChats(updatedChats);
     });
 
@@ -109,7 +119,13 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
               <View style={styles.chatTextContainer}>
                 <Text style={styles.chatName}>{otherUser.display_name}</Text>
                 <Text style={styles.chatUsername}>@{otherUser.username}</Text>
-                <Text style={styles.chatLastMessage}>{chatLastMessage}</Text>
+                <Text
+                  style={[
+                    styles.chatLastMessage,
+                    chat.unread ? {fontWeight: 'bold'} : {},
+                  ]}>
+                  {chatLastMessage}
+                </Text>
                 {chat.is_private && (
                   <Icon
                     name="lock"

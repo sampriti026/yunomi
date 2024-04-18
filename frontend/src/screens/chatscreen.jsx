@@ -48,6 +48,14 @@ const ChatScreen = ({navigation, route}) => {
     return await DeviceInfo.isEmulator();
   }
   const apiUrl = 'http://10.0.2.2:8000';
+  const updateLastRead = () => {
+    const conversationRef = firestore()
+      .collection('conversations')
+      .doc(conversationId);
+    conversationRef.update({
+      [`lastRead.${userId}`]: firestore.FieldValue.serverTimestamp(),
+    });
+  };
 
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
@@ -79,10 +87,15 @@ const ChatScreen = ({navigation, route}) => {
 
   useEffect(() => {
     console.log('called');
+
     if (!isFocused) return; // Check if the screen is focused and conversationId is valid
 
     console.log('ChatScreen is focused and conversationId is:', conversationId);
-    console.log(conversationId, 'conversationId');
+    if (!conversationId) {
+      setMessages([]);
+      return;
+    }
+
     // Define the fetchConversation function to get the conversation details and set up the listener
     const fetchConversation = async () => {
       const conversationDoc = await firestore()
@@ -91,7 +104,8 @@ const ChatScreen = ({navigation, route}) => {
         .get();
 
       if (!conversationDoc.exists) {
-        console.error('Conversation not found');
+        console.log('Conversation not found');
+
         return;
       }
 
@@ -138,9 +152,11 @@ const ChatScreen = ({navigation, route}) => {
             });
 
             const fetchedMessages = await Promise.all(updates);
+            console.log(fetchedMessages, 'fetchedMessages');
             setMessages(
               fetchedMessages.sort((a, b) => b.timestamp - a.timestamp),
             );
+            console.log(messages, 'setMessages');
           },
           error => {
             console.error('Error fetching messages:', error);
@@ -164,23 +180,26 @@ const ChatScreen = ({navigation, route}) => {
     };
   }, [conversationId]);
 
-  // useEffect(() => {
-  //   // Set active chat ID when the screen is focused
-  //   const focusListener = navigation.addListener('focus', () => {
-  //     setActiveChatId(conversationId);
-  //   });
+  useEffect(() => {
+    // Set active chat ID when the screen is focused
+    const focusListener = navigation.addListener('focus', () => {
+      console.log(conversationId, 'active');
+      setActiveChatId(conversationId);
+      updateLastRead();
+    });
 
-  //   // Remove active chat ID when the screen is blurred (navigated away from)
-  //   const blurListener = navigation.addListener('blur', () => {
-  //     removeActiveChatId();
-  //   });
+    // Remove active chat ID when the screen is blurred (navigated away from)
+    const blurListener = navigation.addListener('blur', () => {
+      removeActiveChatId();
+      updateLastRead();
+    });
 
-  //   return () => {
-  //     // Cleanup listeners when the component is unmounted or when navigation state changes
-  //     navigation.removeListener('focus', focusListener);
-  //     navigation.removeListener('blur', blurListener);
-  //   };
-  // }, [navigation, conversationId]);
+    return () => {
+      // Cleanup listeners when the component is unmounted or when navigation state changes
+      navigation.removeListener('focus', focusListener);
+      navigation.removeListener('blur', blurListener);
+    };
+  }, [navigation, conversationId]);
 
   useEffect(() => {
     const backAction = () => {
@@ -233,10 +252,29 @@ const ChatScreen = ({navigation, route}) => {
           },
         ]);
       } else {
+        if (
+          responseData.detail ===
+          'Cannot start a new conversation due to restrictions.'
+        ) {
+          Alert.alert(
+            'Subscription Required',
+            'Gotta subscribe for premium to send more than three private messages in a week.',
+            [{text: 'OK', onPress: () => console.log('OK Pressed')}],
+          );
+        } else {
+          console.error('Error sending message:', responseData.detail);
+        }
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      Alert.alert('Error', 'Failed to send message');
+      if (
+        error.message === 'Cannot start a new conversation due to restrictions.'
+      ) {
+        Alert.alert(
+          'Subscription Required',
+          'Gotta subscribe for premium to send more than three private messages in a week.',
+          [{text: 'OK', onPress: () => console.log('OK Pressed')}],
+        );
+      }
     }
   };
 

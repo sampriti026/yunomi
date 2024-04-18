@@ -95,7 +95,6 @@ const ProfileScreen = ({route, navigation}) => {
     );
 
     // Also uses navigateToChatScreen with a single argument object
-    console.log('OnSendMess', yourUserId, userId, isPrivate);
     navigateToChatScreen({
       userId: yourUserId,
       otherUserId: userId,
