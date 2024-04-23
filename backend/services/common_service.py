@@ -6,13 +6,17 @@ import openai
 import requests
 from fastapi import FastAPI, HTTPException
 from models import Query
-import requests
 import json
 import httpx
+from openai import AsyncOpenAI
 
 
 
-openai.api_key = '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'
+
+
+client = AsyncOpenAI(
+    api_key='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',
+)
 
 
 async def generate_text(input_data):
@@ -217,7 +221,6 @@ async def validate_user_match(message, user_prompt):
 #         print(f"Error while interpreting the message intention: {e}")
 #         return False  # In case of error, default to False or handle as needed
 async def find_top_matching_users(original_prompt, current_user_id, current_message_id):
-    print("Fetching all embeddings from Firestore")
 
     # Generate embedding for the original message using local FastAPI
     async with httpx.AsyncClient() as client:
@@ -225,6 +228,7 @@ async def find_top_matching_users(original_prompt, current_user_id, current_mess
             "http://127.0.0.1:8000/get_embedding/",
             json={"text": original_prompt}
         )
+        
     
     embedding_response.raise_for_status()
     # Ensure the embedding is appropriately shaped

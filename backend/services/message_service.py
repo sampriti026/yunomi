@@ -1,5 +1,5 @@
 from dependencies import db
-from services.common_service import find_top_matching_users, generate_text
+from services.common_service import generate_text
 from services.user_services import get_user_details
 from fastapi import FastAPI, HTTPException
 import logging
@@ -10,6 +10,7 @@ from encrypt import encrypt_text, load_key, decrypt_text
 from datetime import datetime, timedelta
 from services.notif_service import send_fcm_notification
 from datetime import datetime, timezone
+from services.milvus import find_top_matching_users
 
 
 
@@ -124,39 +125,24 @@ async def get_or_create_conversation(user_id: str):
 async def receive_message(message):
     # First, save the user's message
     message_id = save_message(user_id=message.user_id, text=message.text, from_bot=False)
-    
+    responses = []      
+
     # Directly find top matching users for the received message
-    matched_users = await find_top_matching_users(message.text, message.user_id, message_id)
-    
-    if not matched_users:
-        # No matches found, inform the user
+    async for matched_users in find_top_matching_users(message.text, message.user_id, message_id):
+        if matched_users:
+            save_message(user_id=message.user_id, text=matched_users["text"], from_bot=True, matched_user_id=matched_users["matched_user_id"], display_name=matched_users["display_name"], profilePic=matched_users["profilePic"])
+            responses.append(matched_users)
+            print(responses, "final response")
+
+
+    if not responses:
+    # No matches found, inform the user
         user_response = "Hmm, looks like no one is quite like you in this app. I will let you know when we find one."
         save_message(user_id=message.user_id, text=user_response, from_bot=True)
         return [{"text": user_response}]  # Wrap in a list for consistent response structure
-
-    responses = []
-    # Fetch and format user details for matched users
-    for user_id, _ in matched_users:
-        user_detail = await get_user_details(user_id)
-        if user_detail:
-            # Format the response with user details
-            response = {
-                "text": f"We found a match for you! Their message: '{_}'",
-                "matched_user_id": user_id,
-                'display_name': user_detail.get("display_name", "Unknown"),
-                "profilePic": user_detail.get("profilePic",'https://via.placeholder.com/150/FF0000/FFFFFF?text=User'),
-            }
-            display_name = user_detail.get("display_name", "Unknown")
-            profilePic = user_detail.get("profilePic",  'https://via.placeholder.com/150/FF0000/FFFFFF?text=User')
-
-            save_message(user_id=message.user_id, text=response["text"], from_bot=True, matched_user_id=user_id, display_name=display_name, profilePic=profilePic)
-
-            responses.append(response)
-        else:
-            # Handle case where user details could not be fetched
-            continue  # or append a different response indicating the issue
-    print(response, "final response")
+    print(responses, "final response")
     return responses
+
 
 
 def save_message(user_id, text, from_bot, matched_users=None, **kwargs):

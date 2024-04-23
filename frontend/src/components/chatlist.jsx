@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'; // Import Icon from re
 import firestore from '@react-native-firebase/firestore';
 import {decryptCombined} from '../services.jsx/encrypt';
 
-const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
+const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
   const [chats, setChats] = useState([]);
   const [apiUrl, setApiUrl] = useState('');
 
@@ -44,8 +44,6 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
       .collection('conversations')
       .where('participants', 'array-contains', userId)
       .orderBy('last_updated', 'desc');
-    console.log(query, 'updatedChats');
-
     const filteredQuery = viewOnlyPublic
       ? query.where('is_private', '==', false)
       : query;
@@ -78,16 +76,15 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
       });
 
       const updatedChats = await Promise.all(chatsPromises);
-      console.log(updatedChats, 'updatedChats');
       setChats(updatedChats);
     });
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, viewOnlyPublic]);
 
   return (
     <View>
-      {chats.map(chat => {
+      {chats.map((chat, index) => {
         const otherUser = chat.participants.find(p => p.userId !== userId);
         const isPrivate = chat.is_private;
         chatLastMessage = chat.last_message;
@@ -104,7 +101,7 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic = false}) => {
                 otherUser.bio,
                 isPrivate,
                 chat.conversation_id,
-                otherUser.dob,
+                index,
               )
             }>
             <View style={styles.chatItem}>

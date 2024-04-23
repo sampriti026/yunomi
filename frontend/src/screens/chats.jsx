@@ -16,6 +16,7 @@ function Chats({navigation}) {
     bio,
     isPrivate,
     conversationId,
+    index,
   ) => {
     // Extract chatId and other participant's ID
 
@@ -29,6 +30,8 @@ function Chats({navigation}) {
       bio,
       isPrivate,
       conversationId,
+      index,
+      viewOnlyPublic: false,
     });
 
     const conversationRef = firestore()
@@ -41,7 +44,11 @@ function Chats({navigation}) {
 
   return (
     <View style={styles.page}>
-      <ChatsList userId={userId} onChatSelect={handleChatSelect} />
+      <ChatsList
+        key="chats-chatslist" // Unique key for the instance in Chats
+        userId={userId}
+        onChatSelect={handleChatSelect}
+      />
     </View>
   );
 }

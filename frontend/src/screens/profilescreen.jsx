@@ -59,6 +59,7 @@ const ProfileScreen = ({route, navigation}) => {
     bio,
     isPrivate,
     conversationId,
+    index,
   ) => {
     // Now uses navigateToChatScreen with a single argument object
     navigateToChatScreen({
@@ -70,6 +71,8 @@ const ProfileScreen = ({route, navigation}) => {
       bio,
       isPrivate,
       conversationId,
+      index,
+      viewOnlyPublic: true,
     });
   };
 
@@ -104,6 +107,7 @@ const ProfileScreen = ({route, navigation}) => {
       bio,
       isPrivate: isPrivate,
       conversationId,
+      viewOnlyPublic,
     });
   };
 
@@ -118,9 +122,10 @@ const ProfileScreen = ({route, navigation}) => {
           bio={bio}
         />
         <ChatsList
+          key="profile-chatslist"
           userId={userId}
           onChatSelect={handleChatSelect}
-          viewOnlyPublic={userId !== yourUserId}
+          viewOnlyPublic={true}
         />
       </ScrollView>
       <ExpandableFAB onSendMessage={onSendMessage} />

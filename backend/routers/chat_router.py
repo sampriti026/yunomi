@@ -61,8 +61,11 @@ async def get_conversations(user_id: str):
 
 @router.post("/generate-summary")
 async def generate_summary():
-    return ai.scheduled_function()
-
+    try:
+        result = await ai.scheduled_function()
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

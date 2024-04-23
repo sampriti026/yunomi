@@ -19,8 +19,9 @@ import {setActiveChatId, removeActiveChatId} from '../components/storage';
 import {encryptAndCombine, decryptCombined} from '../services.jsx/encrypt';
 import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import {convertToRGBA} from 'react-native-reanimated';
 import {useIsFocused} from '@react-navigation/native';
+import {useRealTimeSummary} from '../services.jsx/summary';
+import {BlurView} from '@react-native-community/blur'; // Import BlurView
 
 const ChatScreen = ({navigation, route}) => {
   const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
@@ -33,10 +34,13 @@ const ChatScreen = ({navigation, route}) => {
 
     isPrivate,
     conversationId,
+    index,
+    viewOnlyPublic,
   } = route.params;
   const [messages, setMessages] = useState([]);
   const [userDetails, setUserDetails] = useState(null);
   const [postedMessageIds, setPostedMessageIds] = useState({}); // New state to track posted messages
+  const [summary, setSummary] = useState('');
 
   // Get the currently logged-in user's ID
   const loggedInUserId = auth().currentUser ? auth().currentUser.uid : null;
@@ -56,7 +60,6 @@ const ChatScreen = ({navigation, route}) => {
       [`lastRead.${userId}`]: firestore.FieldValue.serverTimestamp(),
     });
   };
-
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
     const userDoc = await firestore()
@@ -86,18 +89,29 @@ const ChatScreen = ({navigation, route}) => {
   }, [userId, apiUrl]);
 
   useEffect(() => {
-    console.log('called');
-
     if (!isFocused) return; // Check if the screen is focused and conversationId is valid
+    setMessages([]);
 
-    console.log('ChatScreen is focused and conversationId is:', conversationId);
-    if (!conversationId) {
-      setMessages([]);
-      return;
-    }
+    console.log(viewOnlyPublic, 'chatscreen called right before when needed');
 
     // Define the fetchConversation function to get the conversation details and set up the listener
     const fetchConversation = async () => {
+      if (viewOnlyPublic && index > 0) {
+        const userDetails = await fetchUserDetails(loggedInUserId);
+        if (userDetails && userDetails.premium) {
+          console.log('User has premium status. Summary not set.');
+        } else {
+          const unsubscribe = firestore()
+            .collection('conversations')
+            .doc(conversationId)
+            .onSnapshot(documentSnapshot => {
+              if (documentSnapshot.exists) {
+                const data = documentSnapshot.data();
+                setSummary(data.summary || '');
+              }
+            });
+        }
+      }
       const conversationDoc = await firestore()
         .collection('conversations')
         .doc(conversationId)
@@ -147,16 +161,19 @@ const ChatScreen = ({navigation, route}) => {
                     };
                   });
               } else {
-                return Promise.resolve({...messageData, key: doc.id});
+                return Promise.resolve({
+                  ...messageData,
+                  key: doc.id,
+                  timestamp: messageData.timestamp.toDate(),
+                });
               }
             });
 
             const fetchedMessages = await Promise.all(updates);
-            console.log(fetchedMessages, 'fetchedMessages');
+            console.log(fetchedMessages[1]);
             setMessages(
               fetchedMessages.sort((a, b) => b.timestamp - a.timestamp),
             );
-            console.log(messages, 'setMessages');
           },
           error => {
             console.error('Error fetching messages:', error);
@@ -178,7 +195,7 @@ const ChatScreen = ({navigation, route}) => {
         unsubscribeConversation();
       }
     };
-  }, [conversationId]);
+  }, [conversationId, viewOnlyPublic]);
 
   useEffect(() => {
     // Set active chat ID when the screen is focused
@@ -420,6 +437,14 @@ const ChatScreen = ({navigation, route}) => {
         )}
       />
       {isParticipant && <InputBox sendMessage={sendMessage} />}
+      {summary && (
+        <>
+          <BlurView style={styles.absolute} blurType="light" blurAmount={1} />
+          <View style={styles.summaryContainer}>
+            <Text style={styles.summaryText}>{summary}</Text>
+          </View>
+        </>
+      )}
     </View>
   );
 };
@@ -473,6 +498,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginRight: 7,
     color: 'white',
+  },
+  absolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+  },
+
+  summaryContainer: {
+    position: 'absolute',
+    bottom: 100, // Adjust the gap from the bottom as needed
+    alignSelf: 'center',
+    backgroundColor: 'white', // Semi-transparent black
+    borderRadius: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginHorizontal: 50, // To keep the text short and not span the entire screen width
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  summaryText: {
+    color: 'black',
+    fontSize: 14, // Smaller font size for the summary
+    textAlign: 'justified',
   },
 });
 
