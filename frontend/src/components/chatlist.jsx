@@ -8,23 +8,10 @@ import {decryptCombined} from '../services.jsx/encrypt';
 
 const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
   const [chats, setChats] = useState([]);
-  const [apiUrl, setApiUrl] = useState('');
 
   async function isEmulator() {
     return await DeviceInfo.isEmulator();
   }
-
-  useEffect(() => {
-    const initializeApiUrl = async () => {
-      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
-      const API_URL_DEVICE = 'http://192.168.0.104';
-
-      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
-      setApiUrl(url); // Set the state
-    };
-
-    initializeApiUrl();
-  }, []);
 
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
