@@ -98,7 +98,6 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
                 otherUser.display_name,
                 otherUser.username,
                 otherUser.profilePic,
-                otherUser.bio,
                 isPrivate,
                 chat.conversation_id,
                 index,

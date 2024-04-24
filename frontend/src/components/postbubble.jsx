@@ -59,6 +59,7 @@ const PostBubble = ({
   postId,
   post_userId,
   displayname,
+  username,
   text,
   timestamp,
   likes: initialLikes,
@@ -66,8 +67,11 @@ const PostBubble = ({
   userLogo,
   repost,
   repostedDisplayname,
+  repostedUsername,
   repostedUserLogo,
   repostedTimestamp,
+  repostedUserId,
+  navigation,
 }) => {
   const [likes, setLikes] = useState(initialLikes);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
@@ -124,6 +128,16 @@ const PostBubble = ({
     }
   };
 
+  const navigateToProfile = (userId, repost) => {
+    navigation.navigate('ProfileScreen', {
+      userId: userId,
+      profilePic: repost ? repostedUserLogo : userLogo, // Adjust keys as per your API response
+      display_name: repost ? repostedDisplayname : displayname,
+      username: repost ? repostedUsername : username,
+    });
+  };
+  // Handle the case where user details are not found
+
   const heartIconPath =
     'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'; // Path for a heart icon
 
@@ -132,20 +146,26 @@ const PostBubble = ({
       {/* Show ogContainer if repost is true */}
       {repost && (
         <View style={styles.ogContainer}>
-          <Image source={userLogo} style={styles.logo} />
-          <Text style={styles.displayname}>
-            {displayname + ' swiped from his inbox'}
-          </Text>
+          <TouchableOpacity
+            onPress={() => navigateToProfile(post_userId, repost)}>
+            <Image source={{uri: userLogo}} style={styles.logo} />
+            <Text style={styles.displayname}>
+              {displayname + ' swiped from their inbox'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
       <View style={styles.repostContainer}>
         {/* Conditionally use repostedUserLogo or userLogo based on repost status */}
-
-        <Image
-          source={repost ? repostedUserLogo : userLogo}
-          style={styles.repostLogo}
-        />
-
+        <TouchableOpacity
+          onPress={() =>
+            navigateToProfile(repost ? repostedUserId : post_userId, repost)
+          }>
+          <Image
+            source={repost ? {uri: repostedUserLogo} : {uri: userLogo}}
+            style={styles.repostLogo}
+          />
+        </TouchableOpacity>
         <Swipeable
           ref={swipeableRef}
           renderLeftActions={renderLeftActions}
@@ -157,13 +177,19 @@ const PostBubble = ({
           friction={1}>
           <View style={styles.bubble}>
             {/* Conditionally use repostedDisplayname or displayname based on repost status */}
-            <Text style={styles.repostedDisplayname}>
-              {repost ? repostedDisplayname : displayname}
-            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                navigateToProfile(repost ? repostedUserId : post_userId, repost)
+              }>
+              <Text style={styles.repostedDisplayname}>
+                {repost ? repostedDisplayname : displayname}
+              </Text>
+            </TouchableOpacity>
+
             <Text style={styles.text}>{text}</Text>
             {/* Conditionally use repostedTimestamp or timestamp based on repost status */}
             <Text style={styles.timestampInsideBubble}>
-              {formatTimestamp(repost ? repostedTimestamp : timestamp)}
+              {formatTimestamp(repost ? repostedTimestamp.toDate() : timestamp)}
             </Text>
           </View>
         </Swipeable>

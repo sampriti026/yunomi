@@ -30,7 +30,6 @@ const ChatScreen = ({navigation, route}) => {
     otherUserId,
     profilePic,
     display_name,
-
     isPrivate,
     conversationId,
     index,
@@ -40,6 +39,7 @@ const ChatScreen = ({navigation, route}) => {
   const [userDetails, setUserDetails] = useState(null);
   const [postedMessageIds, setPostedMessageIds] = useState({}); // New state to track posted messages
   const [summary, setSummary] = useState('');
+  console.log(navigation, 'nOMMIIIII');
 
   // Get the currently logged-in user's ID
   const loggedInUserId = auth().currentUser ? auth().currentUser.uid : null;
@@ -323,6 +323,7 @@ const ChatScreen = ({navigation, route}) => {
   const onMessageSwipe = async messageId => {
     swipeableRefs.current[messageId]?.close();
     try {
+      console.log(messageId, 'messageId');
       const response = await fetch(`${apiUrl}/send_post`, {
         method: 'POST',
         headers: {
@@ -364,7 +365,6 @@ const ChatScreen = ({navigation, route}) => {
         profilePic: userDetails.profilePic, // Adjust keys as per your API response
         display_name: userDetails.display_name,
         username: userDetails.username,
-        bio: userDetails.bio,
       });
     } else {
       console.error('User details not found');
@@ -414,7 +414,7 @@ const ChatScreen = ({navigation, route}) => {
             }}
             onSwipeableOpen={direction => {
               if (direction === 'right') {
-                onMessageSwipe(item.message_id);
+                onMessageSwipe(item.key);
               }
             }}
             overshootLeft={false}

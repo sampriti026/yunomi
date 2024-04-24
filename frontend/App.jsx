@@ -14,8 +14,8 @@ import {MenuProvider} from 'react-native-popup-menu';
 import messaging from '@react-native-firebase/messaging';
 import setupForegroundMessageHandler from './src/services.jsx/notification';
 import * as RNIap from 'react-native-iap';
-import {generateAndSaveKey} from './src/services.jsx/encrypt';
 import 'react-native-get-random-values';
+import FeedWithProvider from './src/screens/feed';
 
 enableScreens();
 
@@ -113,6 +113,7 @@ function App() {
                   name="ProfileScreen"
                   component={ProfileScreen}
                 />
+                {/* <AppStack.Screen name="Feed" component={FeedWithProvider} /> */}
               </>
             )}
           </AppStack.Navigator>

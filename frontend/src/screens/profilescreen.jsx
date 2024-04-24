@@ -10,14 +10,13 @@ import {BackHandler} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 
 const ProfileScreen = ({route, navigation}) => {
-  const {userId, profilePic, display_name, username, bio} = route.params;
+  const {userId, profilePic, display_name, username} = route.params;
   const [isFabOpen, setIsFabOpen] = useState(false);
 
   const yourUserId = auth().currentUser ? auth().currentUser.uid : null;
   const navigateToChatScreen = params => {
     navigation.navigate('ChatScreen', params);
   };
-
   const findConversationId = async (userId, otherUserId, isPrivate) => {
     try {
       // Query conversations that include the current user and match the privacy setting
@@ -52,7 +51,6 @@ const ProfileScreen = ({route, navigation}) => {
     display_name,
     username,
     profilePic,
-    bio,
     isPrivate,
     conversationId,
     index,
@@ -64,7 +62,6 @@ const ProfileScreen = ({route, navigation}) => {
       display_name,
       username,
       profilePic,
-      bio,
       isPrivate,
       conversationId,
       index,
@@ -100,7 +97,6 @@ const ProfileScreen = ({route, navigation}) => {
       profilePic,
       display_name,
       username,
-      bio,
       isPrivate: isPrivate,
       conversationId,
       viewOnlyPublic,
@@ -115,7 +111,6 @@ const ProfileScreen = ({route, navigation}) => {
           profilePic={profilePic}
           displayName={display_name}
           username={username}
-          bio={bio}
         />
         <ChatsList
           key="profile-chatslist"

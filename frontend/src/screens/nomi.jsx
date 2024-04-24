@@ -106,11 +106,9 @@ const Nomi = ({navigation}) => {
     if (userDetails) {
       navigation.navigate('ProfileScreen', {
         userId: userId,
-        otherUserId: user,
         profilePic: userDetails.profilePic, // Adjust keys as per your API response
         display_name: userDetails.display_name,
         username: userDetails.username,
-        bio: userDetails.bio,
       });
     } else {
       console.error('User details not found');

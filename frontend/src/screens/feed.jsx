@@ -14,10 +14,11 @@ import auth from '@react-native-firebase/auth';
 import PostBubble from '../components/postbubble';
 import {FeedProvider, useFeedContext} from '../FeedContext';
 import CheckBox from '@react-native-community/checkbox'; // Import CheckBox
+import firestore from '@react-native-firebase/firestore';
 
 const apiUrl = 'http://10.0.2.2:8000';
 
-const Feed = () => {
+const Feed = ({navigation}) => {
   const [posts, setPosts] = useState([]);
 
   const {setSwipedPost, swipedPost} = useFeedContext(); // Use context to listen to swiped post details
@@ -25,25 +26,82 @@ const Feed = () => {
 
   const userId = auth().currentUser ? auth().currentUser.uid : null;
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
-    try {
-      const response = await axios.get(`${apiUrl}/fetch_posts`);
-      const postsWithLikeStatus = response.data.map(post => ({
-        ...post,
-        // Check if the current logged-in user's ID is directly in the `liked_by` array
-        isLiked: post.liked_by.includes(userId),
-      }));
-
-      setPosts(postsWithLikeStatus);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      Alert.alert('Error', 'Failed to fetch posts');
+  const fetchUserDetails = async userId => {
+    // Placeholder function to fetch user details from Firestore
+    const userDoc = await firestore().collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      return {userId: userId, ...userDoc.data()}; // Include additional user details as needed
     }
+    return null;
   };
+
+  useEffect(() => {
+    const unsubscribe = firestore()
+      .collection('posts')
+      .orderBy('timestamp', 'desc') // Ensure you have an index for this in Firestore
+      .onSnapshot({
+        error: e => console.error('Error fetching posts:', e),
+        next: async querySnapshot => {
+          const fetchedPosts = [];
+          for (const doc of querySnapshot.docs) {
+            const postData = doc.data();
+            const userDetails = await fetchUserDetails(postData.user_id);
+
+            if (postData.repost) {
+              // Handling reposts
+              const originalMessage = await firestore()
+                .collection('conversations')
+                .doc(postData.conversationId)
+                .collection('messages')
+                .doc(postData.messageId)
+                .get();
+
+              if (originalMessage.exists) {
+                const originalData = originalMessage.data();
+                const repostedUserDetails = await fetchUserDetails(
+                  originalData.user_id,
+                );
+
+                fetchedPosts.push({
+                  postId: doc.id,
+                  post_userId: postData.user_id,
+                  displayname: userDetails.display_name,
+                  username: userDetails.username,
+                  text: originalData.text,
+                  timestamp: postData.timestamp,
+                  likes: postData.likes,
+                  liked_by: postData.liked_by,
+                  userLogo: userDetails.profilePic,
+                  repost: true,
+                  repostedDisplayname: repostedUserDetails.display_name,
+                  repostedUsername: repostedUserDetails.username,
+                  repostedUserLogo: repostedUserDetails.profilePic,
+                  repostedTimestamp: originalData.timestamp,
+                  repostedUserId: originalData.user_id,
+                });
+              }
+            } else {
+              // Handling original posts
+              fetchedPosts.push({
+                postId: doc.id,
+                post_userId: postData.user_id,
+                displayname: userDetails.display_name,
+                username: userDetails.username,
+                text: postData.content,
+                timestamp: postData.timestamp,
+                likes: postData.likes,
+                liked_by: postData.liked_by,
+                userLogo: userDetails.profilePic,
+                repost: false,
+              });
+            }
+          }
+          setPosts(fetchedPosts);
+        },
+      });
+
+    return () => unsubscribe(); // Detach listener when the component is unmounted
+  }, []);
 
   const renderReplyBox = () => {
     if (!swipedPost) return null; // No swiped post, no reply box
@@ -134,21 +192,26 @@ const Feed = () => {
   };
 
   const renderItem = ({item}) => {
+    console.log(item.post_userId, item.repostedUserId, 'brr');
     return (
       <View>
         <PostBubble
           postId={item.postId}
           post_userId={item.post_userId}
           displayname={item.displayname}
+          username={item.username}
           text={item.text}
           timestamp={item.timestamp}
           likes={item.likes}
           isLiked={item.isLiked}
-          userLogo={{uri: item.userLogo}}
+          userLogo={item.userLogo}
           repost={item.repost}
           repostedDisplayname={item.repostedDisplayname}
-          repostedUserLogo={{uri: item.repostedUserLogo}}
-          repostedTimestamp={item.repostedTimestamp} // Use URI for network images
+          repostedUsername={item.repostedUsername}
+          repostedUserLogo={item.repostedUserLogo}
+          repostedTimestamp={item.repostedTimestamp}
+          repostedUserId={item.repostedUserId}
+          navigation={navigation}
         />
       </View>
     );
@@ -221,9 +284,9 @@ const styles = StyleSheet.create({
   },
 });
 
-const FeedWithProvider = () => (
+const FeedWithProvider = ({navigation}) => (
   <FeedProvider>
-    <Feed />
+    <Feed navigation={navigation} />
   </FeedProvider>
 );
 

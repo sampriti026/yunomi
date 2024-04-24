@@ -2,7 +2,7 @@
 import React from 'react';
 import {View, Text, Image, StyleSheet} from 'react-native';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
-const ProfileDetails = ({profilePic, displayName, username, bio}) => {
+const ProfileDetails = ({profilePic, displayName, username}) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -15,7 +15,6 @@ const ProfileDetails = ({profilePic, displayName, username, bio}) => {
           <Text style={styles.username}>@{username}</Text>
         </View>
       </View>
-      <Text style={styles.bio}>Bio: {bio || 'No bio available'}</Text>
       {/* Add other profile details here */}
     </View>
   );
@@ -49,10 +48,6 @@ const styles = StyleSheet.create({
   },
   username: {
     color: Color.fCDDEC,
-  },
-  bio: {
-    color: Color.fCDDEC,
-    marginTop: 5,
   },
 });
 

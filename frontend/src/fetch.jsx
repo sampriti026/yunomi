@@ -1,31 +1,30 @@
-// ParentComponent.js
-import React, {useState, useEffect} from 'react';
-import ChatsList from './ChatsList';
-import Chats from './Chats';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
+// import React, {useState, useEffect} from 'react';
+// import ChatsList from './ChatsList';
+// import Chats from './Chats';
+// import {GoogleSignin} from '@react-native-google-signin/google-signin';
 
-function ParentComponent() {
-  const [userId, setUserId] = useState(null);
+// function ParentComponent() {
+//   const [userId, setUserId] = useState(null);
 
-  useEffect(() => {
-    const fetchUserId = async () => {
-      try {
-        const userInfo = await GoogleSignin.signInSilently();
-        setUserId(userInfo.user.id);
-      } catch (error) {
-        console.error(error);
-      }
-    };
+//   useEffect(() => {
+//     const fetchUserId = async () => {
+//       try {
+//         const userInfo = await GoogleSignin.signInSilently();
+//         setUserId(userInfo.user.id);
+//       } catch (error) {
+//         console.error(error);
+//       }
+//     };
 
-    fetchUserId();
-  }, []);
+//     fetchUserId();
+//   }, []);
 
-  return (
-    <>
-      <ChatsList userId={userId} />
-      <Chats userId={userId} />
-    </>
-  );
-}
+//   return (
+//     <>
+//       <ChatsList userId={userId} />
+//       <Chats userId={userId} />
+//     </>
+//   );
+// }
 
-export default ParentComponent;
+// export default ParentComponent;
