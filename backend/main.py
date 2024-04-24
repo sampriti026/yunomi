@@ -14,6 +14,11 @@ app.include_router(user_router.router)
 app.include_router(post_router.router)
 
 app.include_router(notif_router.router)
+from dotenv import load_dotenv
+
+load_dotenv()  # This loads the environment variables from .env.
+
+
 
 
 @app.post("/get_embedding/")

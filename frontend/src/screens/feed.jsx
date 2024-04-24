@@ -37,6 +37,7 @@ const Feed = () => {
         // Check if the current logged-in user's ID is directly in the `liked_by` array
         isLiked: post.liked_by.includes(userId),
       }));
+
       setPosts(postsWithLikeStatus);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -91,7 +92,6 @@ const Feed = () => {
 
       const responseData = await response.data;
       if (responseData.status === 'success') {
-        console.log('Post added successfully:', responseData.post_id);
         // Optionally refresh your post list here if needed
       } else {
         console.error('Failed to add post:', responseData.message);
@@ -111,7 +111,6 @@ const Feed = () => {
     const type = replyPrivately ? 'private' : 'public';
 
     try {
-      console.log(userId, swipedPost.postId, swipedPost.post_userId);
       const response = await axios.post(`${apiUrl}/post_reply`, {
         user_id: userId,
         post_id: swipedPost.postId,

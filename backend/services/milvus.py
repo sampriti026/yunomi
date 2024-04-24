@@ -2,15 +2,22 @@ from pymilvus import MilvusClient
 from openai import AsyncOpenAI
 import asyncio
 import json
+import os
 from dependencies import db
 
 # Initialize Firebase Admin SDK
 
-CLUSTER_ENDPOINT="https://in03-c2901c7a5de96d7.api.gcp-us-west1.zillizcloud.com" # Set your cluster endpoint
-TOKEN="e5b5c45dbae3db12d4efed2f2eeaa77600e58a3be5fceaa6376a3e07f620524b2fdd72ecb044788a22c6238f403cedbd07069955" # Set your token
+CLUSTER_ENDPOINT = os.getenv('CLUSTER_ENDPOINT')
+TOKEN = os.getenv('TOKEN')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+
+CLUSTER_ENDPOINT=CLUSTER_ENDPOINT
+TOKEN=TOKEN
+
 
 openai = AsyncOpenAI(
-    api_key='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',
+    api_key=OPENAI_API_KEY
 )
 
 # Initialize a MilvusClient instance

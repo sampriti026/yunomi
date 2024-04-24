@@ -11,6 +11,10 @@ from datetime import datetime, timedelta
 from services.notif_service import send_fcm_notification
 from datetime import datetime, timezone
 from services.milvus import find_top_matching_users
+import os
+
+# Access the encryption key from environment variable
+encryption_key = os.getenv('ENCRYPTION_KEY')
 
 
 
@@ -18,7 +22,7 @@ from services.milvus import find_top_matching_users
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-key = load_key("key.key")
+key = encryption_key
 
 
 

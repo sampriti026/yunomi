@@ -62,8 +62,6 @@ function LoginPage({navigation}) {
       );
 
       setFirebaseUid(userCredential.user.uid);
-      console.log(firebaseUid, 'firebaseuid');
-      console.log(userCredential.user.uid, 'usercreddd');
       setEmail(userCredential.user.email); // Get the user's email address
 
       const googleId = user.id;
@@ -72,12 +70,10 @@ function LoginPage({navigation}) {
         `${apiUrl}/check_user_exists/${googleId}`,
       );
       if (response.data.user_exists) {
-        console.log('User exists in the system.');
         setMessage('Welcome back');
         navigation.navigate('FrameTabsScreen');
         await updateFcmToken(userCredential.user.uid, apiUrl);
       } else {
-        console.log('User not found in the system.');
         setIsFirstTimeUser(true);
         setIsSignUpViaGoogle(true);
       }

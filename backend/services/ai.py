@@ -3,16 +3,18 @@ from firebase_admin import firestore
 from openai import AsyncOpenAI
 from datetime import datetime
 import pytz
-import firebase_admin
 from firebase_admin import credentials, firestore
-import requests
+import os
+
 
 from dependencies import db
 
 
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
 # Initialize OpenAI asynchronously
 client = AsyncOpenAI(
-    api_key='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',
+    api_key=OPENAI_API_KEY,
 )
 
 

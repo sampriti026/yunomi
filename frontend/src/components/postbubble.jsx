@@ -55,9 +55,6 @@ const formatTimestamp = isoTimestamp => {
 const apiUrl = 'http://10.0.2.2:8000';
 const userId = auth().currentUser ? auth().currentUser.uid : null;
 
-const defaultUserLogoUri =
-  'https://via.placeholder.com/150/FF0000/FFFFFF?text=User';
-
 const PostBubble = ({
   postId,
   post_userId,
@@ -113,7 +110,6 @@ const PostBubble = ({
     setLikes(newLikes);
 
     try {
-      console.log(postId, userId);
       // Construct the URL with postId and userId
       const toggleLikeUrl = `${apiUrl}/toggle_like/${postId}/${userId}`;
 
@@ -127,13 +123,6 @@ const PostBubble = ({
       console.error('Failed to toggle like', error);
     }
   };
-  const imageSource = repost
-    ? repostedUserLogo
-      ? {uri: repostedUserLogo}
-      : defaultUserLogoUri
-    : userLogo
-    ? {uri: userLogo}
-    : defaultUserLogoUri;
 
   const heartIconPath =
     'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'; // Path for a heart icon
@@ -153,7 +142,7 @@ const PostBubble = ({
         {/* Conditionally use repostedUserLogo or userLogo based on repost status */}
 
         <Image
-          source={repost ? repostedUserLogo : userLogo || defaultImageObject}
+          source={repost ? repostedUserLogo : userLogo}
           style={styles.repostLogo}
         />
 
@@ -163,7 +152,6 @@ const PostBubble = ({
           onSwipeableOpen={direction => {
             if (direction === 'left') {
               handleSwipeRight(postId, displayname, text);
-              console.log('swiped right');
             }
           }}
           friction={1}>

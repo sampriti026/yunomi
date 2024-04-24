@@ -114,8 +114,13 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
                 style={styles.dp}
               />
               <View style={styles.chatTextContainer}>
-                <Text style={styles.chatName}>{otherUser.display_name}</Text>
-                <Text style={styles.chatUsername}>@{otherUser.username}</Text>
+                <Text style={styles.chatNameContainer}>
+                  <Text style={styles.chatName}>{otherUser.display_name}</Text>
+                  <Text style={styles.chatUsername}>
+                    {' '}
+                    @{otherUser.username}
+                  </Text>
+                </Text>
                 <Text
                   style={[
                     styles.chatLastMessage,
@@ -148,8 +153,6 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
     alignItems: 'center',
   },
   dp: {
@@ -162,14 +165,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  chatNameContainer: {
+    flexDirection: 'row', // Ensures that child Text components are inline
+    alignItems: 'center',
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
   chatName: {
     fontWeight: 'bold',
-    fontSize: 16,
-    color: '#FFFFFF', // Changed to white
   },
   chatUsername: {
+    fontWeight: 'normal', // Ensure the username is not bold
     fontSize: 14,
-    color: '#FFFFFF', // Changed to white
+    color: '#AAAAAA', // Lighter grey color for the username
+    left: 100, // Adds space between the display name and the username
   },
   lockIcon: {
     position: 'absolute',
@@ -182,6 +191,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'grey',
     paddingTop: 5,
+  },
+  divider: {
+    borderBottomColor: '#CCC',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    width: '85%',
   },
 });
 

@@ -29,9 +29,7 @@ const decryptText = encryptedText => {
 const encryptedText = 'YOUR_ENCRYPTED_TEXT_HERE'; // Replace this with the encrypted text you want to decrypt
 
 decryptText(encryptedText)
-  .then(decryptedMessage => {
-    console.log('Decrypted Message:', decryptedMessage);
-  })
+  .then(decryptedMessage => {})
   .catch(error => {
     console.error('Decryption Error:', error);
   });

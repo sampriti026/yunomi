@@ -23,15 +23,6 @@ export const sendNotification = async ({
   senderId,
 }) => {
   try {
-    console.log(
-      apiUrl,
-      receiverToken,
-      display_name,
-      content,
-      profilePic,
-      conversationId,
-      senderId,
-    );
     const response = await axios.post(`${apiUrl}/send_notification/`, {
       receiver_token: receiverToken,
       display_name,
@@ -40,8 +31,6 @@ export const sendNotification = async ({
       conversation_id: conversationId,
       sender_id: senderId,
     });
-
-    console.log('Notification sent successfully:', response.data);
   } catch (error) {
     console.error('Failed to send notification:', error.response || error);
   }

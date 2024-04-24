@@ -137,12 +137,9 @@ const MultiStepForm = ({
 
   const submitDetails = async () => {
     try {
-      console.log(formData);
-
       // If signing up directly (not via Google), you might still want to check username uniqueness as a final guard
       if (!isSignUpViaGoogle) {
         // Create Firebase Auth user with email and password
-        console.log('auth not auth ');
 
         const userCredential = await auth().createUserWithEmailAndPassword(
           formData.email,
@@ -155,12 +152,10 @@ const MultiStepForm = ({
         delete userData.password; // Ensure password isn't sent to your backend
 
         // Create user document in backend with Firebase UID
-        console.log(userData);
 
         await axios.post(`${apiUrl}/create_user/`, userData);
         await updateFcmToken(firebaseUID, apiUrl);
       } else {
-        console.log(formData);
         await axios.post(`${apiUrl}/create_user/`, formData);
         await updateFcmToken(firebaseUid, apiUrl);
       }

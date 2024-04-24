@@ -20,7 +20,6 @@ import {encryptAndCombine, decryptCombined} from '../services.jsx/encrypt';
 import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import {useIsFocused} from '@react-navigation/native';
-import {useRealTimeSummary} from '../services.jsx/summary';
 import {BlurView} from '@react-native-community/blur'; // Import BlurView
 
 const ChatScreen = ({navigation, route}) => {
@@ -92,14 +91,11 @@ const ChatScreen = ({navigation, route}) => {
     if (!isFocused) return; // Check if the screen is focused and conversationId is valid
     setMessages([]);
 
-    console.log(viewOnlyPublic, 'chatscreen called right before when needed');
-
     // Define the fetchConversation function to get the conversation details and set up the listener
     const fetchConversation = async () => {
       if (viewOnlyPublic && index > 0) {
         const userDetails = await fetchUserDetails(loggedInUserId);
         if (userDetails && userDetails.premium) {
-          console.log('User has premium status. Summary not set.');
         } else {
           const unsubscribe = firestore()
             .collection('conversations')
@@ -118,8 +114,6 @@ const ChatScreen = ({navigation, route}) => {
         .get();
 
       if (!conversationDoc.exists) {
-        console.log('Conversation not found');
-
         return;
       }
 
@@ -170,7 +164,6 @@ const ChatScreen = ({navigation, route}) => {
             });
 
             const fetchedMessages = await Promise.all(updates);
-            console.log(fetchedMessages[1]);
             setMessages(
               fetchedMessages.sort((a, b) => b.timestamp - a.timestamp),
             );
@@ -200,7 +193,6 @@ const ChatScreen = ({navigation, route}) => {
   useEffect(() => {
     // Set active chat ID when the screen is focused
     const focusListener = navigation.addListener('focus', () => {
-      console.log(conversationId, 'active');
       setActiveChatId(conversationId);
       updateLastRead();
     });
@@ -257,7 +249,6 @@ const ChatScreen = ({navigation, route}) => {
         }),
       });
       const responseData = await response.json();
-      console.log(responseData, 'responseData'); // Directly parse the response as JSON
       if (responseData.status === 'success') {
         // Update the messages state to include the new message
         setMessages(prevMessages => [

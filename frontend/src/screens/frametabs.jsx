@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
-import {Modal, Text, View, TouchableOpacity} from 'react-native';
 import Nomi from './nomi';
 import Chats from './chats';
 import Feed from './feed';
@@ -61,20 +60,15 @@ function FrameTabsScreen({navigation}) {
     async function initIAP() {
       try {
         await RNIap.initConnection();
-        console.log('IAP connection is initialized.');
         await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
         const items = await RNIap.getSubscriptions({skus});
-        console.log('Products:', items);
         setProducts(items);
-      } catch (err) {
-        console.log(err, 'eror in frmtabs');
-      }
+      } catch (err) {}
     }
 
     initIAP();
 
     const purchaseUpdateSub = purchaseUpdatedListener(async purchase => {
-      console.log('purchaseUpdatedListener', purchase);
       const receipt = purchase.transactionReceipt;
       if (receipt) {
         try {

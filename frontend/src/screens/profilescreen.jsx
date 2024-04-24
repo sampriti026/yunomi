@@ -37,12 +37,8 @@ const ProfileScreen = ({route, navigation}) => {
 
       // If a matching conversation is found, return its ID
       if (matchingConversation) {
-        console.log(
-          `Found matching conversation with ID: ${matchingConversation.id}`,
-        );
         return matchingConversation.id;
       } else {
-        console.log('No matching conversation found.');
         return null;
       }
     } catch (error) {
@@ -90,7 +86,7 @@ const ProfileScreen = ({route, navigation}) => {
     return () => backHandler.remove();
   }, [navigation]);
 
-  const onSendMessage = async isPrivate => {
+  const onSendMessage = async (isPrivate, viewOnlyPublic) => {
     const conversationId = await findConversationId(
       yourUserId,
       userId,

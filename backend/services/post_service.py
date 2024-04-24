@@ -8,11 +8,15 @@ from services.common_service import find_conversation, find_conversation_with_ty
 from services.message_service import check_weekly_limit
 from google.cloud.firestore import Increment
 from encrypt import encrypt_text, load_key, decrypt_text
+import os
+
+# Access the encryption key from environment variable
+encryption_key = os.getenv('ENCRYPTION_KEY')
 
 
 from models import Post
 
-key = load_key("key.key")
+key = encryption_key
 
 def send_post(post: Post):
     try:
@@ -141,10 +145,10 @@ async def fetch_posts():
                         "timestamp": post_data.get('timestamp', ''),
                         "likes": post_data.get('likes', 0),
                         "liked_by": post_data.get('liked_by', []),
-                        "userLogo": user_details.get('profile_pic', 'https://via.placeholder.com/150/FF0000/FFFFFF?text=User'),
+                        "userLogo": user_details.get('profilePic'),
                         "repost": True,
                         "repostedDisplayname": reposted_user_details.get('display_name', ''),
-                        "repostedUserLogo": reposted_user_details.get('profile_pic', 'https://via.placeholder.com/150/FF0000/FFFFFF?text=User'),
+                        "repostedUserLogo": reposted_user_details.get('profilePic'),
                         "repostedTimestamp": original_message_data.get('timestamp', ''),
                     })
                 else:
@@ -161,7 +165,7 @@ async def fetch_posts():
                     "timestamp": post_data.get('timestamp', ''),
                     "likes": post_data.get('likes', 0),
                     "liked_by": post_data.get('liked_by', []),
-                    "userLogo": user_details.get('profile_pic', 'https://via.placeholder.com/150/FF0000/FFFFFF?text=User'),
+                    "userLogo": user_details.get('profilePic',),
                     "repost": False
                 })
         return result

@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   TextInput,
@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import {updateFcmToken} from './updatefcm';
-import {BackHandler} from 'react-native';
 
 const EmailPasswordLoginForm = ({setMessage, navigation, apiUrl}) => {
   const [email, setEmail] = useState('');
@@ -20,7 +19,6 @@ const EmailPasswordLoginForm = ({setMessage, navigation, apiUrl}) => {
         email,
         password,
       );
-      console.log('Logged in with:', userCredential.user.email);
       const firebaseUid = userCredential.user.uid; // Fetching the Firebase UID
       await updateFcmToken(firebaseUid, apiUrl); // Update FCM Token for the user
 

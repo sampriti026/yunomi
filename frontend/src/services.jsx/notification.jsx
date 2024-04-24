@@ -6,17 +6,12 @@ const setupForegroundMessageHandler = () => {
   const unsubscribe = messaging().onMessage(async remoteMessage => {
     const notificationData = remoteMessage.data;
     const activeChatId = await getActiveChatId();
-    console.log('setupforeground called', notificationData);
 
     if (notificationData.conversationId === activeChatId) {
-      console.log('Notification is for active chat, not showing notification.');
-
       return; // Skip showing the notification
     }
 
     const isPrivate = notificationData.isPrivate === 'true';
-    console.log('Message received in foreground');
-    console.log('notificationData.display_name', notificationData);
     showNotification(
       notificationData.display_name,
       notificationData.content,

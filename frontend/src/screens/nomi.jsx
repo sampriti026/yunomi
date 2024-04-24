@@ -102,7 +102,6 @@ const Nomi = ({navigation}) => {
   };
 
   const navigateChatscreen = async user => {
-    console.log(user);
     const userDetails = await fetchUserDetails(user);
     if (userDetails) {
       navigation.navigate('ProfileScreen', {

@@ -24,12 +24,12 @@ const ExpandableFAB = ({onSendMessage}) => {
         <View style={styles.optionsContainer}>
           <TouchableOpacity
             style={styles.optionButton}
-            onPress={() => onSendMessage(true)}>
+            onPress={() => onSendMessage(true, true)}>
             <Text style={styles.optionText}>Send a private message</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.optionButton}
-            onPress={() => onSendMessage(false)}>
+            onPress={() => onSendMessage(false, false)}>
             <Text style={styles.optionText}>
               Send a message that people can read
             </Text>

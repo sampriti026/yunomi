@@ -1,7 +1,6 @@
 import PushNotification from 'react-native-push-notification';
 
 export const showNotification = (title, message, isPrivate, profilePic) => {
-  console.log('show notif called');
   PushNotification.localNotification({
     /* Android Only Properties */
     channelId: 'yunomi', // Ensure you create this channel in your app initialization
