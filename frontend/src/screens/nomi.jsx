@@ -6,7 +6,6 @@ import {LeftBubble, RightBubble} from '../components/bubbles';
 import axios from 'axios';
 import {ScrollView} from 'react-native';
 import auth from '@react-native-firebase/auth';
-import DeviceInfo from 'react-native-device-info';
 import ContactCard from '../components/contact';
 import {BackHandler, ToastAndroid} from 'react-native';
 
@@ -17,24 +16,9 @@ const Nomi = ({navigation}) => {
   const position = useRef(new Animated.Value(0)).current;
   const [activeLabel, setActiveLabel] = useState('nomi');
   const scrollViewRef = useRef(null);
-  const [apiUrl, setApiUrl] = useState('');
   const [lastBackPressed, setLastBackPressed] = useState(0);
 
-  async function isEmulator() {
-    return await DeviceInfo.isEmulator();
-  }
-
-  useEffect(() => {
-    const initializeApiUrl = async () => {
-      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
-      const API_URL_DEVICE = 'http://192.168.0.104';
-
-      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
-      setApiUrl(url); // Set the state
-    };
-
-    initializeApiUrl();
-  }, []);
+  const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 
   useEffect(() => {
     // Function to handle back button press
@@ -195,6 +179,11 @@ const Nomi = ({navigation}) => {
         onContentSizeChange={() =>
           scrollViewRef.current.scrollToEnd({animated: true})
         }>
+        <LeftBubble text="looking for someone who would be interested in you?" />
+        <LeftBubble text="tell me something about yourself along with who you wanna connect in a single message, i will do some magic." />
+        <LeftBubble text="for eg - 'hey i am 21 year old gamer looking for people who live in europe and would love to play CoD with me'" />
+        <LeftBubble text="or maybe - 'I realised that i resort to fantasizing about hardwork without doing the work. anyone i can connect to someone who will help me with this?'" />
+
         {messages.map((message, index) => {
           if (message.matched_user_id) {
             return (

@@ -3,7 +3,7 @@ import {StyleSheet, TouchableOpacity, View, Text} from 'react-native';
 import axios from 'axios';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {BackHandler} from 'react-native';
-import DeviceInfo from 'react-native-device-info';
+import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import MultiStepForm from '../components/Multistepform';
 import EmailPasswordLoginForm from '../components/emailpassword';
@@ -20,14 +20,11 @@ function LoginPage({navigation}) {
   const [message, setMessage] = useState('');
   const [googleId, setGoogleId] = useState(null);
   const [firebaseUid, setFirebaseUid] = useState('');
-  const [apiUrl, setApiUrl] = useState('');
   const [isSignUpViaGoogle, setIsSignUpViaGoogle] = useState(false);
   const [email, setEmail] = useState('');
   const [showEmailLogin, setShowEmailLogin] = useState(false);
 
-  async function isEmulator() {
-    return await DeviceInfo.isEmulator();
-  }
+  const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -38,18 +35,6 @@ function LoginPage({navigation}) {
 
     return unsubscribe;
   }, [navigation]);
-
-  useEffect(() => {
-    const initializeApiUrl = async () => {
-      const API_URL_EMULATOR = 'http://10.0.2.2:8000';
-      const API_URL_DEVICE = 'http://192.168.0.104';
-
-      const url = (await isEmulator()) ? API_URL_EMULATOR : API_URL_DEVICE;
-      setApiUrl(url); // Set the state
-    };
-
-    initializeApiUrl();
-  }, []);
 
   const onGoogleButtonPress = async () => {
     try {
@@ -64,15 +49,13 @@ function LoginPage({navigation}) {
       setFirebaseUid(userCredential.user.uid);
       setEmail(userCredential.user.email); // Get the user's email address
 
-      const googleId = user.id;
-      setGoogleId(user.id);
-      const response = await axios.get(
-        `${apiUrl}/check_user_exists/${googleId}`,
-      );
-      if (response.data.user_exists) {
+      const usersRef = firestore().collection('users');
+      const doc = await usersRef.doc(userCredential.user.uid).get();
+
+      if (doc.exists) {
         setMessage('Welcome back');
         navigation.navigate('FrameTabsScreen');
-        await updateFcmToken(userCredential.user.uid, apiUrl);
+        await updateFcmToken(userCredential.user.uid);
       } else {
         setIsFirstTimeUser(true);
         setIsSignUpViaGoogle(true);
@@ -93,7 +76,6 @@ function LoginPage({navigation}) {
       'hardwareBackPress',
       handleBackPress,
     );
-    setShowEmailLogin(false);
 
     return () => backHandler.remove();
   }, []);
@@ -101,13 +83,8 @@ function LoginPage({navigation}) {
   const handleBackPress = async () => {
     try {
       // Sign out from Firebase
-      await auth().signOut();
 
-      // // Sign out from Google Signin
-      // await GoogleSignin.revokeAccess();
-      // await GoogleSignin.signOut();
-
-      // Optionally, navigate user to a specific screen, e.g., LandingPage
+      setShowEmailLogin(false);
       navigation.navigate('LandingPage');
     } catch (error) {
       console.error('Error during sign out:', error);
@@ -202,8 +179,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   message: {
-    marginTop: 20,
-    color: 'white',
+    position: 'absolute',
+    bottom: 200,
   },
 });
 

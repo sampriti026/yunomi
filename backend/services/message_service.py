@@ -12,6 +12,10 @@ from services.notif_service import send_fcm_notification
 from datetime import datetime, timezone
 from services.milvus import find_top_matching_users
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 # Access the encryption key from environment variable
 encryption_key = os.getenv('ENCRYPTION_KEY')
@@ -52,80 +56,6 @@ async def get_or_create_conversation(user_id: str):
     return {"conversation_id": new_conversation_ref.id}
 
 
-# async def receive_message(message):
-#     # Generate the user-bot conversation ID
-#     conversation_id = f"{message.user_id}_bot"
-#     message_type = 'bot'
-    
-#     # Check if first-time user and send onboarding message if needed
-#     # if await is_first_time_user(message.user_id):
-#     #     print("returning true for first time convrations")
-#     #     await send_onboarding_message(message.user_id)
-   
-#     # Fetch recent messages for context
-#     conversation_history = await fetch_conversation_history(conversation_id)  # Assume this function is defined
-
-#     # Fetch the latest conversation state
-#     conversation_state = await fetch_conversation_state(message.user_id)
-
-#     if conversation_state == 'awaiting_preferences':
-#         # Process user preferences
-#         print("awaiting pref, process_user is called")
-#         user_response, next_state = await process_user_preferences(message)
-#         print(user_response, "user_response")
-        
-#     elif conversation_state == 'awaiting_personal_details':
-#         # Process personal details
-#         user_response, next_state = await process_personal_details(message)
-#     elif conversation_state == 'ready_to_match':
-#         user_response, next_state = await handle_ready_to_match(message, conversation_id)
-#     # Update conversation state
-#     print("next_state", next_state)
-#     await update_conversation_state(message.user_id, next_state, user_response)
-
-
-#     # Save the user's message
-#     db.collection('messages').add({
-#         'conversationId': conversation_id,
-#         'user_id': message.user_id,
-#         'text': message.text,
-#         'from_bot': False,
-#         'timestamp': datetime.utcnow().isoformat(),
-#         'type': message_type
-#     })
-
-#      # Save the bot's response
-#     db.collection('messages').add({
-#         'conversationId': conversation_id,
-#         'user_id': message.user_id,
-#         'text': user_response if isinstance(user_response, str) else user_response.get("response", ""),
-#         'from_bot': True,
-#         'timestamp': datetime.utcnow().isoformat(),
-#         'type': message_type
-#     })
-
-#     db.collection('conversations').document(conversation_id).set({
-#         'last_message': user_response if isinstance(user_response, str) else user_response.get("response", ""),
-#         'last_updated': datetime.utcnow().isoformat(),
-#         'conversation_state': next_state
-#     })
-
-#     db.collection('users').document(conversation_id).set({
-#         'last_message': user_response if isinstance(user_response, str) else user_response.get("response", ""),
-#         'last_updated': datetime.utcnow().isoformat(),
-#         'conversation_state': next_state
-#     })
-
-#     # Fetch recent messages for context
-#     # recent_context = fetch_recent_messages(conversation_id, limit=5)  # Assume this function is defined
-
-#     # Generate contextual embedding for the new message
-#     # generate_contextual_embedding(conversation_id, message.user_id, message.text, recent_context)
-
-#     # Return either the user response for connection request or the bot's next message
-#     print("ran the code till end")
-#     return user_response
-
 async def receive_message(message):
     # First, save the user's message
     message_id = save_message(user_id=message.user_id, text=message.text, from_bot=False)
@@ -150,6 +80,7 @@ async def receive_message(message):
 
 
 def save_message(user_id, text, from_bot, matched_users=None, **kwargs):
+
     # Construct the base message document to be saved
     message_data = {
         'conversationId': f"{user_id}_bot",
@@ -212,58 +143,65 @@ async def get_conversation_id(user1: str, user2: str):
     return None
 
 
-
 async def send_message(request):
-    # Encrypt text if the message is private
-    # Check for existing conversation or conditions for a new one
-    print(request)
-    if request.conversation_id is None:
-        if request.is_private and not await check_weekly_limit(request.sender_id, request.receiver_id):
-            raise HTTPException(status_code=400, detail="Cannot start a new conversation due to restrictions.")
-        conversation_ref = db.collection('conversations').document()
-        conversation_ref.set({
-            'participants': [request.sender_id, request.receiver_id],
-            'is_private': request.is_private,
-            'last_message': request.text,
-            'last_updated': datetime.utcnow(),
+    logging.info(f"Received message send request: {request}")
+    
+    try:
+        if request.conversation_id is None:
+            if request.is_private and not await check_weekly_limit(request.sender_id, request.receiver_id):
+                raise HTTPException(status_code=400, detail="Cannot start a new conversation due to restrictions.")
+            conversation_ref = db.collection('conversations').document()
+            conversation_ref.set({
+                'participants': [request.sender_id, request.receiver_id],
+                'is_private': request.is_private,
+                'last_message': request.text,
+                'last_updated': datetime.utcnow(),
+            })
+            conversation_id = conversation_ref.id
+            logging.info(f"New conversation created with ID: {conversation_id}")
+        else:
+            conversation_ref = db.collection('conversations').document(request.conversation_id)
+            conversation_ref.update({
+                'last_updated': datetime.utcnow(),
+                'last_message': request.text,
+            })
+            conversation_id = request.conversation_id
+            logging.info(f"Updated conversation {conversation_id}")
+
+        # Get receiver details
+        receiver_details = await get_user_details(request.receiver_id)
+        if receiver_details:
+            receiver_token = receiver_details.get('fcm_token')
+            logging.info(f"Receiver token retrieved: {receiver_token}")
+            
+            # If receiver details are found, send a FCM notification
+            send_fcm_notification(
+                receiver_token=receiver_token,
+                display_name=receiver_details.get('display_name'),
+                content=request.text,
+                profilePic=receiver_details.get('profilePic'),
+                conversation_id=conversation_id,
+                sender_id=request.sender_id,
+                isPrivate=request.is_private
+            )
+        else:
+            logging.warning("Receiver details not found, notification not sent.")
+
+        # Save the message
+        conversation_messages_ref = db.collection('conversations').document(conversation_id).collection('messages')
+        conversation_messages_ref.add({
+            'user_id': request.sender_id,
+            'text': request.text,
+            'from_bot': False,
+            'timestamp': datetime.utcnow(),
         })
-        conversation_id = conversation_ref.id
-    else:
-        conversation_ref = db.collection('conversations').document(request.conversation_id)
-        conversation_ref.update({
-            'last_updated': datetime.utcnow(),
-            'last_message': request.text,
-        })
-        conversation_id = request.conversation_id
-    # Get receiver details
-    receiver_details = await get_user_details(request.receiver_id)
-    receiver_token=receiver_details.get('fcm_token')
-    print(receiver_token, "receiver_token")
+        logging.info(f"Message added to conversation {conversation_id}")
 
-    if receiver_details:
-        # If receiver details are found, send a FCM notification
-        send_fcm_notification(
-            receiver_token=receiver_details.get('fcm_token'),
-            display_name=receiver_details.get('display_name'),
-            content=request.text,
-            profilePic=receiver_details.get('profilePic'),
-            conversation_id=conversation_id,
-            sender_id=request.sender_id,
-            isPrivate=request.is_private
-        )
-    else:
-        print("Receiver details not found, notification not sent.")
+        return {"status": "success", "message": "Message sent successfully", "conversation_id": conversation_id}
+    except Exception as e:
+        logging.error(f"Error processing send_message request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # Save the message
-    conversation_messages_ref = db.collection('conversations').document(conversation_id).collection('messages')
-    conversation_messages_ref.add({
-        'user_id': request.sender_id,
-        'text': request.text,
-        'from_bot': False,
-        'timestamp': datetime.utcnow(),
-    })
-
-    return {"status": "success", "message": "Message sent successfully", "conversation_id": conversation_id}
 
 
 

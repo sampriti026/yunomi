@@ -16,7 +16,7 @@ import {FeedProvider, useFeedContext} from '../FeedContext';
 import CheckBox from '@react-native-community/checkbox'; // Import CheckBox
 import firestore from '@react-native-firebase/firestore';
 
-const apiUrl = 'http://10.0.2.2:8000';
+const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 
 const Feed = ({navigation}) => {
   const [posts, setPosts] = useState([]);
@@ -127,7 +127,7 @@ const Feed = ({navigation}) => {
         <TouchableOpacity
           onPress={() => setSwipedPost(null)}
           style={styles.crossButton}>
-          <Icon name="times" size={20} color="#FFFFFF" />
+          <Icon name="times" size={30} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     );
@@ -192,7 +192,6 @@ const Feed = ({navigation}) => {
   };
 
   const renderItem = ({item}) => {
-    console.log(item.post_userId, item.repostedUserId, 'brr');
     return (
       <View>
         <PostBubble
@@ -268,7 +267,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 8,
   },
-  crossButton: {},
+  crossButton: {
+    size: 50,
+  },
 
   fetchPostsButton: {
     backgroundColor: '#4CAF50', // Green color for visibility

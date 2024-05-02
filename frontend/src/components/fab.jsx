@@ -71,6 +71,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 20,
   },
+  optionText: {
+    color: 'black',
+  },
   fab: {
     position: 'absolute',
     margin: 16,

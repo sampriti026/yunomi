@@ -19,6 +19,9 @@ const SubscriptionModal = ({isVisible, onClose, onSubscribe, products}) => {
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <ScrollView>
+            <Text style={styles.textStyle}>
+              Get unlimited private dms and read all chats.
+            </Text>
             {products &&
               products.map((product, productIndex) => (
                 <View key={productIndex} style={styles.productContainer}>
@@ -91,6 +94,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: 'black',
   },
   offerButton: {
     borderRadius: 10,

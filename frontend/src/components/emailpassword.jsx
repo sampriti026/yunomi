@@ -90,10 +90,10 @@ const styles = StyleSheet.create({
   input: {
     padding: 15,
     marginBottom: 10,
-    width: '80%',
+    width: '90%',
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: 'gray', // Customize as needed
+    borderColor: '#7B50A5', // Customize as needed
   },
   button: {
     backgroundColor: '#7552A0', // Adjust color as needed
@@ -108,8 +108,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   forgotPasswordText: {
-    color: '#007bff', // Use any color that suits your app's theme
+    color: 'white',
     marginTop: 15,
+    fontWeight: 'bold',
   },
 });
 

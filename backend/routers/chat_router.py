@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from models import Message, Post, SendMessageRequest, ConversationRequest
 from services import chat_service, post_service, message_service, ai
 
+
 router = APIRouter()
 
 
@@ -29,6 +30,7 @@ async def receive_message(message: Message):
 
 @router.post("/send_message")
 async def send_message(request: SendMessageRequest):
+    print("send_message api is called")
     result = await message_service.send_message(request)
     return result
 

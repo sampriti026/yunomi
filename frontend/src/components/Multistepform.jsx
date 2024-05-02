@@ -43,6 +43,7 @@ const MultiStepForm = ({
         email: email,
       }));
     }
+    setMessage('');
   }, [googleId, firebaseUid, isSignUpViaGoogle]);
 
   const checkUsernameExists = async username => {
@@ -64,6 +65,26 @@ const MultiStepForm = ({
     }
   };
 
+  const checkEmailExists = async email => {
+    console.log('checkEmailExists');
+    try {
+      const existingUser = await auth().fetchSignInMethodsForEmail(email);
+      if (existingUser.length > 0) {
+        setFormError(
+          'An account already exists with this email. Please log in instead.',
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      if (error.code === 'auth/invalid-email') {
+        setFormError("This email address doesn't seem right, check again.");
+      }
+      console.error('Error checking email: ', error);
+      return false;
+    }
+  };
+
   // Helper function to update form data
   const updateField = (field, value) => {
     setFormData(prevFormData => ({...prevFormData, [field]: value}));
@@ -72,31 +93,7 @@ const MultiStepForm = ({
     }
     setFormError(''); // Clear form error message when user starts typing
   };
-
-  const steps = [
-    {
-      component: (
-        <TextInput
-          placeholder="Name"
-          value={formData.display_name}
-          onChangeText={text => updateField('display_name', text)}
-          style={styles.input}
-        />
-      ),
-      key: 'display_name',
-    },
-    {
-      component: (
-        <TextInput
-          placeholder="Username"
-          value={formData.username}
-          onChangeText={text => updateField('username', text)}
-          style={styles.input}
-        />
-      ),
-      key: 'username',
-    },
-  ];
+  const steps = [];
 
   if (!isSignUpViaGoogle) {
     steps.push({
@@ -124,6 +121,30 @@ const MultiStepForm = ({
       key: 'password',
     });
   }
+
+  // Common steps for all users
+  steps.push({
+    component: (
+      <TextInput
+        placeholder="Name"
+        value={formData.display_name}
+        onChangeText={text => updateField('display_name', text)}
+        style={styles.input}
+      />
+    ),
+    key: 'display_name',
+  });
+  steps.push({
+    component: (
+      <TextInput
+        placeholder="Username"
+        value={formData.username}
+        onChangeText={text => updateField('username', text)}
+        style={styles.input}
+      />
+    ),
+    key: 'username',
+  });
 
   const validateCurrentStep = () => {
     // Check if the current step's input is filled
@@ -170,21 +191,32 @@ const MultiStepForm = ({
             ? 'Username is available, but other error occurred.'
             : 'Error during user creation: ' +
               (error.response.data || error.message);
-        setMessage(errorMessage);
       } else {
-        setMessage('Network error or other issue: ' + error.message);
+        setFormError('Network error or other issue: ' + error.message);
       }
       console.error(error);
     }
   };
 
   const nextStep = async () => {
-    if (validateCurrentStep()) {
-      if (currentStep < steps.length - 1) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        await submitDetails(); // Final step, attempt to submit the form data
+    if (!validateCurrentStep()) return; // Validate current input first
+
+    // If current step is the email step in non-Google signup, check the email
+    if (
+      !isSignUpViaGoogle &&
+      currentStep === steps.findIndex(step => step.key === 'email')
+    ) {
+      const emailIsValid = await checkEmailExists(formData.email);
+      if (!emailIsValid) {
+        return; // Stop progressing if the email is invalid
       }
+    }
+
+    // Proceed to next step if all checks are passed
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      await submitDetails(); // Final step, attempt to submit the form data
     }
   };
 
@@ -224,6 +256,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'white',
+    top: 70,
   },
 });
 

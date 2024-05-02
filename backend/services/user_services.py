@@ -28,6 +28,7 @@ def create_user_in_db(display_name: str, username: str, google_user_id: Optional
         "user_likes": [],  # Initialize user_likes as an empty list
         "bio": "",  # Initialize bio as empty
         "dob": "",  # Initialize dob as empty
+        "profilePic": "https://storage.googleapis.com/yunomi026.appspot.com/profilePic.png",
         "email": email
     }
 

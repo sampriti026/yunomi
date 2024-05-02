@@ -52,7 +52,7 @@ const formatTimestamp = isoTimestamp => {
   }
 };
 
-const apiUrl = 'http://10.0.2.2:8000';
+const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 const userId = auth().currentUser ? auth().currentUser.uid : null;
 
 const PostBubble = ({
@@ -147,10 +147,11 @@ const PostBubble = ({
       {repost && (
         <View style={styles.ogContainer}>
           <TouchableOpacity
-            onPress={() => navigateToProfile(post_userId, repost)}>
+            onPress={() => navigateToProfile(post_userId, repost)}
+            style={styles.repostTouchable}>
             <Image source={{uri: userLogo}} style={styles.logo} />
             <Text style={styles.displayname}>
-              {displayname + ' swiped from their inbox'}
+              {displayname + ' swiped from their chat'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -213,7 +214,6 @@ const PostBubble = ({
           </Text>
         </View>
       </View>
-      <View style={styles.divider} />
     </View>
   );
 };
@@ -233,6 +233,10 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 14, // Smaller font size than the original username
     color: 'white', // Adjust color as necessary
+  },
+  repostTouchable: {
+    flexDirection: 'row', // Make sure that the touchable area is also in a row
+    alignItems: 'center', // Align items in the center
   },
 
   container: {

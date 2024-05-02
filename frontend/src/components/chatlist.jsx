@@ -1,18 +1,12 @@
 // ChatsList.js
 import React, {useState, useEffect} from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
-import DeviceInfo from 'react-native-device-info';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import Icon from react-native-vector-icons
 import firestore from '@react-native-firebase/firestore';
-import {decryptCombined} from '../services.jsx/encrypt';
+import {decryptMessage, encryptMessagea} from '../services.jsx/encrypt';
 
 const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
   const [chats, setChats] = useState([]);
-
-  async function isEmulator() {
-    return await DeviceInfo.isEmulator();
-  }
-
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
     const userDoc = await firestore()
@@ -25,6 +19,13 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
     return null;
   };
 
+  console.log(viewOnlyPublic);
+
+  const enc = encryptMessage('helo world');
+  console.log(enc);
+  const dec = decryptMessage(enc);
+  console.log(dec);
+
   // this is to fetch all chats of the person.
   useEffect(() => {
     const query = firestore()
@@ -35,36 +36,48 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
       ? query.where('is_private', '==', false)
       : query;
 
-    const unsubscribe = filteredQuery.onSnapshot(async querySnapshot => {
-      const chatsPromises = querySnapshot.docs.map(async doc => {
-        const data = doc.data();
+    const unsubscribe = filteredQuery.onSnapshot(
+      async querySnapshot => {
+        if (querySnapshot) {
+          const chatsPromises = querySnapshot.docs.map(async doc => {
+            const data = doc.data();
 
-        const lastReadTime =
-          data.lastRead && data.lastRead[userId]
-            ? data.lastRead[userId].toDate()
-            : new Date(0); // Convert Firestore timestamp to Date
-        const lastUpdatedTime = data.last_updated.toDate(); // Also convert this to Date
+            const lastReadTime =
+              data.lastRead && data.lastRead[userId]
+                ? data.lastRead[userId].toDate()
+                : new Date(0); // Convert Firestore timestamp to Date
+            const lastUpdatedTime = data.last_updated.toDate(); // Also convert this to Date
 
-        const participantDetails = await Promise.all(
-          data.participants.map(fetchUserDetails),
-        );
-        const lastMessage = data.is_private
-          ? await decryptCombined(data.last_message)
-          : data.last_message;
+            const participantDetails = await Promise.all(
+              data.participants.map(fetchUserDetails),
+            );
+            const lastMessage = data.is_private
+              ? await decryptMessage(data.last_message)
+              : data.last_message;
 
-        return {
-          conversation_id: doc.id,
-          last_message: data.is_private ? lastMessage : data.last_message,
-          last_updated: data.last_updated,
-          participants: participantDetails.filter(Boolean),
-          is_private: data.is_private,
-          unread: lastUpdatedTime > lastReadTime,
-        };
-      });
+            return {
+              conversation_id: doc.id,
+              last_message: data.is_private ? lastMessage : data.last_message,
+              last_updated: data.last_updated,
+              participants: participantDetails.filter(Boolean),
+              is_private: data.is_private,
+              unread: lastUpdatedTime > lastReadTime,
+            };
+          });
 
-      const updatedChats = await Promise.all(chatsPromises);
-      setChats(updatedChats);
-    });
+          const updatedChats = await Promise.all(chatsPromises);
+          setChats(updatedChats);
+        } else {
+          // Handle the case where querySnapshot is null
+          console.error('Failed to fetch chats: querySnapshot is null');
+          setChats([]); // or handle this as needed
+        }
+      },
+      error => {
+        // Handle any errors that occur during the snapshot
+        console.error('Snapshot error:', error);
+      },
+    );
 
     return () => unsubscribe();
   }, [userId, viewOnlyPublic]);

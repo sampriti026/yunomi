@@ -13,7 +13,6 @@ import InputBox from '../components/inputbox';
 import {BackHandler} from 'react-native';
 import {LeftBubble, RightBubble} from '../components/bubbles';
 import auth from '@react-native-firebase/auth';
-import DeviceInfo from 'react-native-device-info';
 import {Animated} from 'react-native';
 import {setActiveChatId, removeActiveChatId} from '../components/storage';
 import {encryptAndCombine, decryptCombined} from '../services.jsx/encrypt';
@@ -39,7 +38,6 @@ const ChatScreen = ({navigation, route}) => {
   const [userDetails, setUserDetails] = useState(null);
   const [postedMessageIds, setPostedMessageIds] = useState({}); // New state to track posted messages
   const [summary, setSummary] = useState('');
-  console.log(navigation, 'nOMMIIIII');
 
   // Get the currently logged-in user's ID
   const loggedInUserId = auth().currentUser ? auth().currentUser.uid : null;
@@ -47,10 +45,7 @@ const ChatScreen = ({navigation, route}) => {
   const isParticipant =
     loggedInUserId === userId || loggedInUserId === otherUserId;
 
-  async function isEmulator() {
-    return await DeviceInfo.isEmulator();
-  }
-  const apiUrl = 'http://10.0.2.2:8000';
+  const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
   const updateLastRead = () => {
     const conversationRef = firestore()
       .collection('conversations')
@@ -193,6 +188,7 @@ const ChatScreen = ({navigation, route}) => {
   useEffect(() => {
     // Set active chat ID when the screen is focused
     const focusListener = navigation.addListener('focus', () => {
+      console.log(conversationId, 'conversationId');
       setActiveChatId(conversationId);
       updateLastRead();
     });
@@ -235,30 +231,17 @@ const ChatScreen = ({navigation, route}) => {
     encryptedText = await encryptAndCombine(text);
 
     try {
-      const response = await fetch(`${apiUrl}/send_message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sender_id: userId,
-          receiver_id: otherUserId,
-          text: isPrivate ? encryptedText : text,
-          conversation_id: conversationId,
-          is_private: isPrivate,
-        }),
+      const response = await axios.post(`${apiUrl}/send_message`, {
+        sender_id: loggedInUserId,
+        receiver_id: otherUserId,
+        text: messageText,
+        conversation_id: conversationId,
+        is_private: isPrivate,
       });
+
       const responseData = await response.json();
       if (responseData.status === 'success') {
         // Update the messages state to include the new message
-        setMessages(prevMessages => [
-          ...prevMessages,
-          {
-            user_id: userId,
-            text: text,
-            timestamp: new Date().toISOString(), // Assuming the timestamp format is ISO string
-          },
-        ]);
       } else {
         if (
           responseData.detail ===
@@ -372,8 +355,21 @@ const ChatScreen = ({navigation, route}) => {
     }
   };
 
+  const enc = encryptMessage('helo world');
+  console.log(enc);
+  const dec = decryptMessage(enc);
+  console.log(dec);
+
   return (
     <View style={styles.container}>
+      <View style={styles.overlayInfoContainer}>
+        {isPrivate ? (
+          <Text style={styles.overlayInfoText}>Encrypted Chat</Text>
+        ) : (
+          <Text style={styles.overlayInfoText}>People may read this chat</Text>
+        )}
+      </View>
+
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.topBarSection}
@@ -433,6 +429,9 @@ const ChatScreen = ({navigation, route}) => {
           <BlurView style={styles.absolute} blurType="light" blurAmount={1} />
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryText}>{summary}</Text>
+            <Text style={styles.summaryText}>
+              Get premium to read their chat.
+            </Text>
           </View>
         </>
       )}
@@ -515,6 +514,23 @@ const styles = StyleSheet.create({
     color: 'black',
     fontSize: 14, // Smaller font size for the summary
     textAlign: 'justified',
+  },
+  overlayInfoContainer: {
+    position: 'absolute', // Position over your flatlist
+    alignSelf: 'center', // Center horizontally
+    top: '10%', // Position in the middle of the screen
+    zIndex: 10, // Make sure it lays over other components
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    borderRadius: 20, // Rounded corners
+    paddingVertical: 5, // Padding for the text
+    paddingHorizontal: 10, // Padding for the text
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayInfoText: {
+    color: 'white', // White text
+    fontSize: 14, // Font size
+    fontWeight: 'bold', // Bold text
   },
 });
 

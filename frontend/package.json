@@ -46,8 +46,8 @@
     "react-native-svg": "^14.1.0",
     "react-native-tab-view": "^3.5.2",
     "react-native-vector-icons": "^10.0.0",
-    "react-navigation": "^4.4.4",
-    "tweetnacl": "^1.0.3"
+    "react-navigation": "^4.4.4"
+    
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
