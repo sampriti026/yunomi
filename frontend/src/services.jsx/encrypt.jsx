@@ -1,77 +1,58 @@
-import {
-  encode as encodeBase64,
-  decode as decodeBase64,
-} from '@stablelib/base64';
-import {encode as encodeUTF8, decode as decodeUTF8} from '@stablelib/utf8';
-import * as Keychain from 'react-native-keychain';
+import firestore from '@react-native-firebase/firestore';
+import CryptoJS from 'crypto-js';
 
-// Generate and save a symmetric key securely
-export const generateAndSaveKey = async () => {
-  const key = randomBytes(secretbox.keyLength);
-  const keyBase64 = encodeBase64(key);
-  await Keychain.setGenericPassword('user', keyBase64, {
-    service: 'com.yunomi.symmetricKey',
-  });
-  return keyBase64;
-};
+let key = null;
 
-export const loadKey = async () => {
+async function fetchAndCacheEncryptionKey() {
   try {
-    const credentials = await Keychain.getGenericPassword({
-      service: 'com.yunomi.symmetricKey',
-    });
-    if (credentials) {
-      // Decode from Base64 and return Uint8Array
-      return decodeBase64(credentials.password);
+    const document = await firestore().collection('key').doc('password').get();
+    if (document.exists) {
+      console.log('Key successfully loaded from Firestore.');
+      key = document.data().key; // Cache the key globally
+    } else {
+      console.warn('No key found in Firestore.');
     }
   } catch (error) {
-    console.error('Error loading the key from secure storage:', error);
+    console.error('Error loading the key from Firestore:', error);
   }
-};
+}
 
-// Encrypt a message
+// Function to ensure the key is loaded
+async function ensureKeyIsLoaded() {
+  if (!key) {
+    await fetchAndCacheEncryptionKey();
+  }
+  if (!key) {
+    throw new Error('Encryption key could not be loaded.');
+  }
+}
+
+// Function to encrypt a message using AES
 export const encryptMessage = async message => {
-  const key = await loadKey();
-  const nonce = randomBytes(secretbox.nonceLength);
-
-  // Correctly encode the message string to Uint8Array using encodeUTF8
-  const messageUint8 = encodeUTF8(message);
-
-  const box = secretbox(messageUint8, nonce, key);
-
-  return {
-    nonce: encodeBase64(nonce),
-    box: encodeBase64(box),
-  };
+  await ensureKeyIsLoaded();
+  console.log(key, 'key');
+  const keyHex = CryptoJS.enc.Hex.parse(key); // Parse key from hex
+  const iv = CryptoJS.lib.WordArray.random(128 / 8); // Generate a 16-byte IV for AES
+  const encrypted = CryptoJS.AES.encrypt(message, keyHex, {
+    iv: iv,
+    mode: CryptoJS.mode.CFB,
+    padding: CryptoJS.pad.NoPadding,
+  });
+  return iv.toString(CryptoJS.enc.Hex) + encrypted.toString(); // Return IV + encrypted data
 };
 
-export const encryptAndCombine = async message => {
-  const {nonce, box} = await encryptMessage(message);
-  return `${nonce}:${box}`; // Use a delimiter like ':' to separate the nonce and box
-};
+// Function to decrypt a message using AES
+export const decryptMessage = async ciphertext => {
+  await ensureKeyIsLoaded();
+  const ivHex = ciphertext.substring(0, 32); // Extract the IV from the ciphertext
+  const encryptedText = ciphertext.substring(32); // The rest is the encrypted data
+  const keyHex = CryptoJS.enc.Hex.parse(key); // Parse key from hex
+  const iv = CryptoJS.enc.Hex.parse(ivHex); // Parse IV from hex
 
-// Decrypt a message
-export const decryptMessage = async (box, nonce, keyUint8) => {
-  const boxUint8 = decodeBase64(box);
-  const nonceUint8 = decodeBase64(nonce);
-
-  const messageUint8 = secretbox.open(boxUint8, nonceUint8, keyUint8);
-  if (!messageUint8) {
-    throw new Error('Decryption failed.');
-  }
-
-  return decodeUTF8(messageUint8);
-};
-
-// Decrypt a combined string of nonce + box (both base64-encoded)
-export const decryptCombined = async combined => {
-  const [nonce, box] = combined.split(':'); // Split by the same delimiter used in encryptAndCombine
-  const keyUint8 = await loadKey();
-
-  if (!keyUint8) {
-    console.error('Key loading failed or returned undefined.');
-    throw new Error('Encryption key is unavailable.');
-  }
-
-  return await decryptMessage(box, nonce, keyUint8); // Now passing the binary key directly
+  const decrypted = CryptoJS.AES.decrypt(encryptedText, keyHex, {
+    iv: iv,
+    mode: CryptoJS.mode.CFB,
+    padding: CryptoJS.pad.NoPadding,
+  });
+  return decrypted.toString(CryptoJS.enc.Utf8); // Convert decrypted data to Utf8 string
 };

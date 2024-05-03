@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import Icon from react-native-vector-icons
 import firestore from '@react-native-firebase/firestore';
-import {decryptMessage, encryptMessagea} from '../services.jsx/encrypt';
+import {decryptMessage, encryptMessage} from '../services.jsx/encrypt';
 
 const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
   const [chats, setChats] = useState([]);
@@ -18,13 +18,6 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
     }
     return null;
   };
-
-  console.log(viewOnlyPublic);
-
-  const enc = encryptMessage('helo world');
-  console.log(enc);
-  const dec = decryptMessage(enc);
-  console.log(dec);
 
   // this is to fetch all chats of the person.
   useEffect(() => {

@@ -15,7 +15,7 @@ import {LeftBubble, RightBubble} from '../components/bubbles';
 import auth from '@react-native-firebase/auth';
 import {Animated} from 'react-native';
 import {setActiveChatId, removeActiveChatId} from '../components/storage';
-import {encryptAndCombine, decryptCombined} from '../services.jsx/encrypt';
+import {encryptMessage, decryptMessage} from '../services.jsx/encrypt';
 import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import {useIsFocused} from '@react-navigation/native';
@@ -127,7 +127,7 @@ const ChatScreen = ({navigation, route}) => {
               const convertedTimestamp = messageData.timestamp.toDate(); // Convert Firestore Timestamp to JavaScript Date
 
               if (is_private) {
-                return decryptCombined(messageData.text)
+                return decryptMessage(messageData.text)
                   .then(decryptedText => {
                     return {
                       ...messageData,
@@ -228,7 +228,8 @@ const ChatScreen = ({navigation, route}) => {
 
   const sendMessage = async text => {
     //lGKQ1fkiRQu9BjF3AwfFM/UmI82sAmxa:e8ICPNFCdpbhxvc+qQmHjmMQ+Nvb
-    encryptedText = await encryptAndCombine(text);
+    encryptedText = await encryptMessage(text);
+    console.log(encryptedText);
 
     try {
       const response = await axios.post(`${apiUrl}/send_message`, {
@@ -354,11 +355,6 @@ const ChatScreen = ({navigation, route}) => {
       // Handle the case where user details are not found
     }
   };
-
-  const enc = encryptMessage('helo world');
-  console.log(enc);
-  const dec = decryptMessage(enc);
-  console.log(dec);
 
   return (
     <View style={styles.container}>

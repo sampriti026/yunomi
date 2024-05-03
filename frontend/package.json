@@ -27,9 +27,11 @@
     "@stablelib/base64": "^1.0.1",
     "@stablelib/utf8": "^1.0.2",
     "axios": "^1.4.0",
+    "crypto-js": "^4.2.0",
     "firebase-admin": "^11.10.1",
     "react": "18.2.0",
     "react-native": "^0.72.3",
+    "react-native-crypto-js": "^1.0.0",
     "react-native-device-info": "^10.11.0",
     "react-native-elements": "^3.4.3",
     "react-native-fs": "^2.20.0",
@@ -46,8 +48,8 @@
     "react-native-svg": "^14.1.0",
     "react-native-tab-view": "^3.5.2",
     "react-native-vector-icons": "^10.0.0",
-    "react-navigation": "^4.4.4"
-    
+    "react-navigation": "^4.4.4",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
