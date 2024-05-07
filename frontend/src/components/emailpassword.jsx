@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import {updateFcmToken} from './updatefcm';
+import {setUserToken} from '../components/storage';
 
 const EmailPasswordLoginForm = ({setMessage, navigation, apiUrl}) => {
   const [email, setEmail] = useState('');
@@ -20,6 +21,9 @@ const EmailPasswordLoginForm = ({setMessage, navigation, apiUrl}) => {
         password,
       );
       const firebaseUid = userCredential.user.uid; // Fetching the Firebase UID
+
+      await setUserToken(firebaseUid);
+
       await updateFcmToken(firebaseUid, apiUrl); // Update FCM Token for the user
 
       // Optionally reset form fields here
@@ -29,7 +33,20 @@ const EmailPasswordLoginForm = ({setMessage, navigation, apiUrl}) => {
       navigation.navigate('FrameTabsScreen');
     } catch (error) {
       console.error(error);
-      setMessage('Login failed: ' + error.message);
+      let errorMessage = '';
+      switch (error.code) {
+        case 'auth/wrong-password':
+          errorMessage = 'The password is incorrect.';
+          break;
+        case 'auth/user-not-found':
+          errorMessage = 'No user of that email ID found.';
+          break;
+        default:
+          errorMessage = 'Login failed. Please try again.';
+          break;
+      }
+
+      setMessage(errorMessage);
     }
   };
 

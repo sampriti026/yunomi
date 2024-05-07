@@ -7,7 +7,6 @@ async function fetchAndCacheEncryptionKey() {
   try {
     const document = await firestore().collection('key').doc('password').get();
     if (document.exists) {
-      console.log('Key successfully loaded from Firestore.');
       key = document.data().key; // Cache the key globally
     } else {
       console.warn('No key found in Firestore.');
@@ -30,7 +29,6 @@ async function ensureKeyIsLoaded() {
 // Function to encrypt a message using AES
 export const encryptMessage = async message => {
   await ensureKeyIsLoaded();
-  console.log(key, 'key');
   const keyHex = CryptoJS.enc.Hex.parse(key); // Parse key from hex
   const iv = CryptoJS.lib.WordArray.random(128 / 8); // Generate a 16-byte IV for AES
   const encrypted = CryptoJS.AES.encrypt(message, keyHex, {

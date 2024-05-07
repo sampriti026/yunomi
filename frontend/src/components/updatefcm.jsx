@@ -21,6 +21,7 @@ export async function updateFcmToken(firebaseUid) {
             fcm_token: fcmToken,
           },
         );
+        console.log(response);
       } catch (error) {
         if (error.response) {
           // The request was made and the server responded with a status code

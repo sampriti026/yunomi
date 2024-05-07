@@ -8,7 +8,7 @@ function LandingPage() {
       <View style={styles.content}>
         <Text style={styles.title}>Yunomi</Text>
         <Text style={styles.subtitle}>
-          A man would travel a ̰ thousand miles to meet he who understands him.
+          A man would travel a thousand miles to meet he who understands him.
         </Text>
         <Text style={styles.question}>What if you didn't have to?</Text>
       </View>

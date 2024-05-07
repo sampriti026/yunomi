@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import Icon from react-native-vector-icons
 import firestore from '@react-native-firebase/firestore';
-import {decryptMessage, encryptMessage} from '../services.jsx/encrypt';
+import {decryptMessage} from '../services.jsx/encrypt';
 
 const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
   const [chats, setChats] = useState([]);
@@ -44,20 +44,18 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
             const participantDetails = await Promise.all(
               data.participants.map(fetchUserDetails),
             );
-            const lastMessage = data.is_private
-              ? await decryptMessage(data.last_message)
-              : data.last_message;
 
             return {
               conversation_id: doc.id,
-              last_message: data.is_private ? lastMessage : data.last_message,
+              last_message: data.is_private
+                ? await decryptMessage(data.last_message)
+                : data.last_message,
               last_updated: data.last_updated,
               participants: participantDetails.filter(Boolean),
               is_private: data.is_private,
               unread: lastUpdatedTime > lastReadTime,
             };
           });
-
           const updatedChats = await Promise.all(chatsPromises);
           setChats(updatedChats);
         } else {

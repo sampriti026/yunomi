@@ -20,7 +20,7 @@ import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import {useIsFocused} from '@react-navigation/native';
 import {BlurView} from '@react-native-community/blur'; // Import BlurView
-
+import axios from 'axios';
 const ChatScreen = ({navigation, route}) => {
   const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
 
@@ -41,6 +41,7 @@ const ChatScreen = ({navigation, route}) => {
 
   // Get the currently logged-in user's ID
   const loggedInUserId = auth().currentUser ? auth().currentUser.uid : null;
+
   // Check if the logged-in user is a participant in the chat
   const isParticipant =
     loggedInUserId === userId || loggedInUserId === otherUserId;
@@ -80,7 +81,7 @@ const ChatScreen = ({navigation, route}) => {
       }
     };
     fetchDetails();
-  }, [userId, apiUrl]);
+  }, [userId]);
 
   useEffect(() => {
     if (!isFocused) return; // Check if the screen is focused and conversationId is valid
@@ -188,8 +189,10 @@ const ChatScreen = ({navigation, route}) => {
   useEffect(() => {
     // Set active chat ID when the screen is focused
     const focusListener = navigation.addListener('focus', () => {
-      console.log(conversationId, 'conversationId');
-      setActiveChatId(conversationId);
+      if (!!conversationId) {
+        setActiveChatId(conversationId);
+      }
+
       updateLastRead();
     });
 
@@ -229,18 +232,17 @@ const ChatScreen = ({navigation, route}) => {
   const sendMessage = async text => {
     //lGKQ1fkiRQu9BjF3AwfFM/UmI82sAmxa:e8ICPNFCdpbhxvc+qQmHjmMQ+Nvb
     encryptedText = await encryptMessage(text);
-    console.log(encryptedText);
-
     try {
       const response = await axios.post(`${apiUrl}/send_message`, {
         sender_id: loggedInUserId,
         receiver_id: otherUserId,
-        text: messageText,
+        text: isPrivate ? encryptedText : text,
         conversation_id: conversationId,
         is_private: isPrivate,
       });
 
-      const responseData = await response.json();
+      const responseData = await response.data;
+
       if (responseData.status === 'success') {
         // Update the messages state to include the new message
       } else {
@@ -258,6 +260,8 @@ const ChatScreen = ({navigation, route}) => {
         }
       }
     } catch (error) {
+      console.log(error);
+
       if (
         error.message === 'Cannot start a new conversation due to restrictions.'
       ) {
@@ -307,7 +311,6 @@ const ChatScreen = ({navigation, route}) => {
   const onMessageSwipe = async messageId => {
     swipeableRefs.current[messageId]?.close();
     try {
-      console.log(messageId, 'messageId');
       const response = await fetch(`${apiUrl}/send_post`, {
         method: 'POST',
         headers: {

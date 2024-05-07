@@ -66,7 +66,6 @@ const MultiStepForm = ({
   };
 
   const checkEmailExists = async email => {
-    console.log('checkEmailExists');
     try {
       const existingUser = await auth().fetchSignInMethodsForEmail(email);
       if (existingUser.length > 0) {
@@ -180,7 +179,6 @@ const MultiStepForm = ({
         await axios.post(`${apiUrl}/create_user/`, formData);
         await updateFcmToken(firebaseUid, apiUrl);
       }
-      setMessage('Welcome to the app!');
 
       navigation.navigate('FrameTabsScreen');
     } catch (error) {

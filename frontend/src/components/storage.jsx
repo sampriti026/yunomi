@@ -23,3 +23,29 @@ export const getActiveChatId = async () => {
     console.error('Error fetching active chat id', error);
   }
 };
+
+export const setUserToken = async userToken => {
+  try {
+    await AsyncStorage.setItem('@UserToken', userToken);
+  } catch (error) {
+    console.error('Error saving user token', error);
+  }
+};
+
+// Function to remove userToken
+export const removeUserToken = async () => {
+  try {
+    await AsyncStorage.removeItem('@UserToken');
+  } catch (error) {
+    console.error('Error removing user token', error);
+  }
+};
+
+// Function to retrieve userToken
+export const getUserToken = async () => {
+  try {
+    return await AsyncStorage.getItem('@UserToken');
+  } catch (error) {
+    console.error('Error fetching user token', error);
+  }
+};

@@ -23,6 +23,5 @@ export const showNotification = (title, message, isPrivate, profilePic) => {
     message: message, // (required)
     playSound: true, // (optional) default: true
     soundName: 'default', // (optional) See `soundName` parameter of `localNotification` function
-    actions: '["reply"]', // (Android only) See the doc for notification actions to know more
   });
 };

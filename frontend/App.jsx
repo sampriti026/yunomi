@@ -1,5 +1,4 @@
 import React, {useState, useEffect} from 'react';
-import LandingPage from './src/screens/landing';
 import LoginPage from './src/screens/login';
 import FrameTabsScreen from './src/screens/frametabs';
 import auth from '@react-native-firebase/auth';
@@ -15,50 +14,39 @@ import messaging from '@react-native-firebase/messaging';
 import setupForegroundMessageHandler from './src/services.jsx/notification';
 import * as RNIap from 'react-native-iap';
 import 'react-native-get-random-values';
-import FeedWithProvider from './src/screens/feed';
 
 enableScreens();
-
-const AuthStack = createStackNavigator();
 const AppStack = createStackNavigator();
 
 function App() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    const subscriber = auth().onAuthStateChanged(user => {
+    const unsubscribe = auth().onAuthStateChanged(user => {
       setIsSignedIn(!!user);
+      setInitializing(false);
     });
-
-    const timer = setTimeout(() => {
-      setShowLanding(false);
-    }, 3000);
-
-    return () => {
-      subscriber();
-      clearTimeout(timer);
-    };
+    return unsubscribe;
   }, []);
 
   const Tab = createMaterialTopTabNavigator();
 
   useEffect(() => {
-    async function requestPermissionsAndGetToken() {
+    const initMessaging = async () => {
       const authStatus = await messaging().requestPermission();
-      const enabled =
+      if (
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-      if (enabled) {
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL
+      ) {
         const fcmToken = await messaging().getToken();
-        if (fcmToken) {
-        } else {
-        }
       }
-    }
+    };
 
-    requestPermissionsAndGetToken();
+    initMessaging();
+    const unsubscribeFromMessaging = setupForegroundMessageHandler();
+    return unsubscribeFromMessaging;
   }, []);
 
   useEffect(() => {
@@ -72,38 +60,34 @@ function App() {
     const authorizationStatus = await messaging().requestPermission();
 
     if (authorizationStatus) {
-      console.log('Permission status:', authorizationStatus);
     }
   }
   requestUserPermission();
 
   useEffect(() => {
-    async function initIAP() {
+    const initIAP = async () => {
       try {
         await RNIap.initConnection();
         await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
       } catch (err) {
-        console.warn('IAP init error:', err);
+        console.error('IAP init error:', err);
       }
-
-      return () => {
-        RNIap.endConnection(); // Correct usage
-      };
-    }
+    };
 
     initIAP();
+    return () => {
+      RNIap.endConnection();
+    };
   }, []);
+  if (initializing) return null; // Show loading spinner here if you'd like
 
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <MenuProvider>
         <NavigationContainer>
           <AppStack.Navigator screenOptions={{headerShown: false}}>
-            {showLanding ? (
-              <AppStack.Screen name="Landing" component={LandingPage} />
-            ) : (
+            {isSignedIn ? (
               <>
-                <AppStack.Screen name="Login" component={LoginPage} />
                 <AppStack.Screen
                   name="FrameTabsScreen"
                   component={FrameTabsScreen}
@@ -113,8 +97,9 @@ function App() {
                   name="ProfileScreen"
                   component={ProfileScreen}
                 />
-                {/* <AppStack.Screen name="Feed" component={FeedWithProvider} /> */}
               </>
+            ) : (
+              <AppStack.Screen name="Login" component={LoginPage} />
             )}
           </AppStack.Navigator>
         </NavigationContainer>

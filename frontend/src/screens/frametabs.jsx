@@ -11,6 +11,7 @@ import {createStackNavigator} from '@react-navigation/stack';
 import Topbar from '../components/Topbar';
 import {purchaseErrorListener, purchaseUpdatedListener} from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
+import {removeUserToken} from '../components/storage';
 
 import SubscriptionModal from '../components/subscriptionModel';
 
@@ -21,21 +22,21 @@ const Tab = createMaterialTopTabNavigator();
 function FrameTabs() {
   return (
     <Tab.Navigator
-      tabBarOptions={{
-        upperCaseLabel: false,
-        activeTintColor: Color.fCDDEC,
-        inactiveTintColor: Color.gray_700,
-        style: {backgroundColor: '#c599f8'},
-        indicatorStyle: {backgroundColor: Color.fCDDEC},
-        tabBarItem: {pressOpacity: 1},
-        labelStyle: {
-          fontSize: 12,
-          fontFamily: FontFamily.robotoBold,
+      screenOptions={{
+        tabBarStyle: {
+          backgroundColor: '#c599f8',
+        },
+        tabBarLabelStyle: {
+          fontSize: 14,
+          fontFamily: 'Roboto-Bold',
           fontWeight: '700',
-          fontSize: FontSize.size_sm,
+        },
+        tabBarActiveTintColor: '#fff',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.7)',
+        tabBarIndicatorStyle: {
+          backgroundColor: '#fff',
         },
       }}
-      swipeEnabled={true}
       tabBarPosition="top"
       animationEnabled={true}>
       <Tab.Screen name="Nomi" component={Nomi} />
@@ -120,6 +121,7 @@ function FrameTabsScreen({navigation}) {
       // Sign out from Google Signin
       await GoogleSignin.revokeAccess();
       await GoogleSignin.signOut();
+      await removeUserToken(); // Remove token from storage
     } catch (error) {
       console.error('Error signing out:', error.message);
     }

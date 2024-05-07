@@ -8,6 +8,7 @@ import {ScrollView} from 'react-native';
 import auth from '@react-native-firebase/auth';
 import ContactCard from '../components/contact';
 import {BackHandler, ToastAndroid} from 'react-native';
+import firestore from '@react-native-firebase/firestore';
 
 const Nomi = ({navigation}) => {
   const userId = auth().currentUser ? auth().currentUser.uid : null;
@@ -141,35 +142,49 @@ const Nomi = ({navigation}) => {
     },
   });
 
-  const fetchBotConversation = async () => {
+  const fetchBotConversation = async userId => {
     try {
-      const response = await axios.get(
-        `${apiUrl}/fetchBotConversation/${userId}`,
-      );
-      const historicalMessages = response.data.messages;
+      // Generate the user-bot conversation ID
+      const conversationId = `${userId}_bot`;
 
+      // Fetch all messages for the given conversation ID
+      const messagesQuery = firestore()
+        .collection('messages')
+        .where('conversationId', '==', conversationId)
+        .orderBy('timestamp');
+      const snapshot = await messagesQuery.get();
+
+      const historicalMessages = snapshot.docs.map(doc => doc.data());
+
+      // Check if there are messages
+      if (historicalMessages.length === 0) {
+        return; // Or handle this case as needed
+      }
+
+      // Process messages if any additional logic is needed
       const formattedMessages = historicalMessages.map(item => {
         if (item.matched_user_id && item.display_name) {
-          // Use a type property instead of storing a component
           return {
-            ...item, // Spread the rest of the item properties
-            type: 'contactCard', // Add a type property
+            ...item,
+            type: 'contactCard',
           };
         }
-        return item; // For other messages, return as is
+        return item;
       });
-      setMessages(formattedMessages);
+
+      setMessages(formattedMessages); // Assuming setMessages is your state updater for messages
     } catch (error) {
-      console.error('Error fetching bot conversation:', error);
+      console.error('Error fetching bot conversation from Firestore:', error);
     }
   };
 
-  // Use this in your useEffect
+  // Usage in useEffect
   useEffect(() => {
-    if (apiUrl) {
-      fetchBotConversation();
+    if (userId) {
+      // Ensure userId is available
+      fetchBotConversation(userId);
     }
-  }, [apiUrl]);
+  }, [userId]); // Dependency on userId if it might change
 
   return (
     <View style={styles.page}>
@@ -187,7 +202,7 @@ const Nomi = ({navigation}) => {
         {messages.map((message, index) => {
           if (message.matched_user_id) {
             return (
-              <>
+              <React.Fragment key={`message-${index}`}>
                 <LeftBubble
                   key={`leftBubble-${index}`} // Ensure unique key by appending a string
                   text={message.text}
@@ -201,7 +216,7 @@ const Nomi = ({navigation}) => {
                   }
                   logoUri={message.profilePic}
                 />
-              </>
+              </React.Fragment>
             );
           } else if (message.from_bot && !message.matched_user_id) {
             return (

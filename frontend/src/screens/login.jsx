@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import {StyleSheet, TouchableOpacity, View, Text} from 'react-native';
-import axios from 'axios';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {BackHandler} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
@@ -45,16 +44,14 @@ function LoginPage({navigation}) {
       const userCredential = await auth().signInWithCredential(
         googleCredential,
       );
-
       setFirebaseUid(userCredential.user.uid);
+
       setEmail(userCredential.user.email); // Get the user's email address
 
       const usersRef = firestore().collection('users');
       const doc = await usersRef.doc(userCredential.user.uid).get();
 
       if (doc.exists) {
-        setMessage('Welcome back');
-        navigation.navigate('FrameTabsScreen');
         await updateFcmToken(userCredential.user.uid);
       } else {
         setIsFirstTimeUser(true);
@@ -85,7 +82,8 @@ function LoginPage({navigation}) {
       // Sign out from Firebase
 
       setShowEmailLogin(false);
-      navigation.navigate('LandingPage');
+      setIsFirstTimeUser(false);
+      setMessage('');
     } catch (error) {
       console.error('Error during sign out:', error);
       setIsFirstTimeUser(false);
@@ -179,8 +177,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   message: {
-    position: 'absolute',
-    bottom: 200,
+    position: 'relative',
+    bottom: 100,
+    color: 'white',
   },
 });
 
