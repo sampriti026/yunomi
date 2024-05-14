@@ -15,6 +15,7 @@ import setupForegroundMessageHandler from './src/services.jsx/notification';
 import * as RNIap from 'react-native-iap';
 import 'react-native-get-random-values';
 import {useNavigation} from '@react-navigation/native';
+import PushNotification from 'react-native-push-notification';
 
 enableScreens();
 const AppStack = createStackNavigator();
@@ -72,56 +73,87 @@ function App() {
     };
   }, []);
 
-  messaging().setBackgroundMessageHandler(async remoteMessage => {
-    console.log('Message handled in the background!', remoteMessage);
-  });
+  messaging().setBackgroundMessageHandler(async remoteMessage => {});
 
   if (initializing) return null; // Show loading spinner here if you'd like
 
   const NotificationHandler = () => {
     const navigation = useNavigation();
 
+    PushNotification.configure({
+      onNotification: function (notification) {
+        // // Example of navigating to a specific screen
+        if (notification.data && notification.data.post_content) {
+          navigation.navigate('ProfileScreen', {
+            userId: notification.data.user_id, // Assuming you have a user ID field
+            displayName: notification.data.display_name,
+            profilePic: notification.data.profilePic,
+            username: notification.data.username,
+          });
+        } else {
+          const isPrivate = notification.data.isPrivate === 'true';
+
+          navigation.navigate('ChatScreen', {
+            senderUserId: notification.data.receiver_id,
+            receiverUserId: notification.data.sender_id,
+            receiverDisplayName: notification.data.sender_display_name,
+            receiverUsername: notification.data.sender_username,
+            receiverProfilePic: notification.data.sender_profilePic,
+            isPrivate: isPrivate,
+            conversationId: notification.data.conversationId,
+            index: 0,
+            viewOnlyPublic: false,
+            senderProfilePic: notification.data.receiver_profilePic,
+            senderDisplayName: notification.data.receiver_display_name,
+            senderUsername: notification.data.receiver_username,
+          });
+        }
+      },
+    });
+
     useEffect(() => {
       messaging()
         .getInitialNotification()
         .then(remoteMessage => {
           if (remoteMessage) {
-            console.log(
-              'Notification caused app to open from quit state:',
-              remoteMessage,
-            );
-            // Extract the required data and navigate
-            const {
-              conversationId,
-              sender_id,
-              receiver_id,
-              receiver_display_name,
-              receiver_username,
-              receiver_profilePic,
-              sender_profilePic,
-              sender_display_name,
-              sender_username,
-            } = remoteMessage.data;
-            const isPrivate = remoteMessage.data.isPrivate === 'true';
-            console.log(
-              'Navigating to ChatScreen with data:',
-              remoteMessage.data,
-            );
+            // Determine if it's a like notification
+            if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
+              navigation.navigate('ProfileScreen', {
+                userId: remoteMessage.data.user_id, // Assuming you have a user ID field
+                displayName: remoteMessage.data.display_name,
+                profilePic: remoteMessage.data.profilePic,
+                username: remoteMessage.data.username,
+              });
+            } else {
+              // Extract the required data and navigate to ChatScreen
+              const {
+                conversationId,
+                sender_id,
+                receiver_id,
+                receiver_display_name,
+                receiver_username,
+                receiver_profilePic,
+                sender_profilePic,
+                sender_display_name,
+                sender_username,
+              } = remoteMessage.data;
+              const isPrivate = remoteMessage.data.isPrivate === 'true';
 
-            navigation.navigate('ChatScreen', {
-              senderUserId: receiver_id,
-              receiverUserId: sender_id,
-              receiverDisplayName: sender_display_name,
-              receiverUsername: sender_username,
-              receiverProfilePic: sender_profilePic,
-              isPrivate,
-              conversationId,
-              index: 0, // Make sure this index is handled or needed in your ChatScreen
-              viewOnlyPublic: false,
-              senderProfilePic: receiver_profilePic,
-              senderDisplayName: receiver_display_name,
-              senderUsername: receiver_username,
-            });
+              navigation.navigate('ChatScreen', {
+                senderUserId: receiver_id,
+                receiverUserId: sender_id,
+                receiverDisplayName: sender_display_name,
+                receiverUsername: sender_username,
+                receiverProfilePic: sender_profilePic,
+                isPrivate,
+                conversationId,
+                index: 0, // Ensure this index is handled or needed in your ChatScreen
+                viewOnlyPublic: false,
+                senderProfilePic: receiver_profilePic,
+                senderDisplayName: receiver_display_name,
+                senderUsername: receiver_username,
+              });
+            }
           }
         })
         .catch(error => console.error('getInitialNotification error', error));

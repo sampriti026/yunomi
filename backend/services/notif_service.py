@@ -33,20 +33,23 @@ def send_fcm_notification(receiver_token: str,  content: str, conversation_id: s
     print('Successfully sent notif:', response)
 
 
-def send_like_notification(receiver_token: str, post_id: str, user_id: str, username: str, display_name: str, profilePic: str, ):
+def send_like_notification(receiver_token: str, post_id: str, user_id: str, username: str, display_name: str, profilePic: str, post_content: str):
     try:
-        # Send notification
+        if len(post_content) > 240:
+            post_content = post_content[:240] + '...'
+
         message = messaging.Message(
             notification=messaging.Notification(
             title='New Like',
-            body=f'Your post has been liked by user {display_name}!',
+            body=f'{post_content}',
         ),
         data={
             "post_id": post_id,
             "user_id": user_id,
             "username": username,
             "display_name": display_name,
-            "profilePic": profilePic        
+            "profilePic": profilePic,      
+            "post_content": post_content  
             },
         token=receiver_token
         )

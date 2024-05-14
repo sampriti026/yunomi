@@ -24,7 +24,8 @@ const Feed = ({navigation}) => {
   const {setSwipedPost, swipedPost} = useFeedContext(); // Use context to listen to swiped post details
   const [replyPrivately, setReplyPrivately] = useState(false);
 
-  const userId = auth().currentUser ? auth().currentUser.uid : null;
+  const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
+  console.log(loggedinUserId);
 
   const fetchUserDetails = async userId => {
     // Placeholder function to fetch user details from Firestore
@@ -134,14 +135,14 @@ const Feed = ({navigation}) => {
   };
 
   const addNewPost = async content => {
-    if (!userId) {
+    if (!loggedinUserId) {
       console.error('User not authenticated');
       return;
     }
 
     try {
       const response = await axios.post(`${apiUrl}/send_post`, {
-        user_id: userId,
+        user_id: loggedinUserId,
         content: content,
         timestamp: new Date().toISOString(),
         repost: false,
@@ -160,7 +161,7 @@ const Feed = ({navigation}) => {
   };
 
   const sendReply = async text => {
-    if (!userId || !swipedPost) {
+    if (!loggedinUserId || !swipedPost) {
       console.error('User not authenticated or no post selected for reply');
       return;
     }
@@ -170,7 +171,7 @@ const Feed = ({navigation}) => {
 
     try {
       const response = await axios.post(`${apiUrl}/post_reply`, {
-        user_id: userId,
+        user_id: loggedinUserId,
         post_id: swipedPost.postId,
         post_user_id: swipedPost.post_userId,
         text: text,

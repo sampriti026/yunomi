@@ -34,7 +34,7 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
         if (querySnapshot) {
           const chatsPromises = querySnapshot.docs.map(async doc => {
             const data = doc.data();
-            const otherUserId = data.participants.find(p => p !== userId); // Assuming participants are stored as an array of userIds
+            const otherUserId = data.participants.find(p => p !== userId);
             const otherUserLastUpdatedTime = data.last_updated[otherUserId]
               ? data.last_updated[otherUserId].toDate()
               : new Date(0);

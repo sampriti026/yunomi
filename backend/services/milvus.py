@@ -63,7 +63,7 @@ async def find_top_matching_users(original_prompt, current_user_id, current_mess
    )
     print(res)
 
-    #get embeddings for the previous user prompts
+    #get embeddings for the previous prompts of current_user_id
     embed = client.query(
     collection_name="prompts",
     filter=f'user_id == "{current_user_id}"',
@@ -73,7 +73,7 @@ async def find_top_matching_users(original_prompt, current_user_id, current_mess
     #search for the closest similarity in bulk filtering the userId that are not the same as the one who prompted
     ser = client.search(
     collection_name="prompts",
-    data=[vector, original_embedding],
+    data=[original_embedding],
     filter=f'user_id != "{current_user_id}"',
     limit=3,
     output_fields=["user_id"]    )

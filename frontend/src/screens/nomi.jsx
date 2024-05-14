@@ -11,7 +11,7 @@ import {BackHandler, ToastAndroid} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 
 const Nomi = ({navigation}) => {
-  const userId = auth().currentUser ? auth().currentUser.uid : null;
+  const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const position = useRef(new Animated.Value(0)).current;
@@ -90,7 +90,7 @@ const Nomi = ({navigation}) => {
     const userDetails = await fetchUserDetails(user);
     if (userDetails) {
       navigation.navigate('ProfileScreen', {
-        userId: userId,
+        userId: user,
         profilePic: userDetails.profilePic, // Adjust keys as per your API response
         display_name: userDetails.display_name,
         username: userDetails.username,
@@ -180,11 +180,11 @@ const Nomi = ({navigation}) => {
 
   // Usage in useEffect
   useEffect(() => {
-    if (userId) {
+    if (loggedinUserId) {
       // Ensure userId is available
-      fetchBotConversation(userId);
+      fetchBotConversation(loggedinUserId);
     }
-  }, [userId]); // Dependency on userId if it might change
+  }, [loggedinUserId]); // Dependency on userId if it might change
 
   return (
     <View style={styles.page}>

@@ -110,7 +110,7 @@ const ProfileScreen = ({route, navigation}) => {
       otherUserId: userId,
       profilePic,
       displayName,
-      userName,
+      username,
       isPrivate: isPrivate,
       conversationId,
       viewOnlyPublic,

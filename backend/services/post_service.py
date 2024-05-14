@@ -97,6 +97,7 @@ async def toggle_like(post_id: str, user_id: str):
                         username= user_details.get('username'), 
                         display_name = user_details.get('display_name'),
                         profilePic= user_details.get('profilePic'), 
+                        post_content=post_data.get('content')
                     )
 
             # Update the post document

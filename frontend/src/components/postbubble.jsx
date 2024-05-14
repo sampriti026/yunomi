@@ -52,9 +52,6 @@ const formatTimestamp = isoTimestamp => {
   }
 };
 
-const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
-const userId = auth().currentUser ? auth().currentUser.uid : null;
-console.log(userId);
 const PostBubble = ({
   postId,
   post_userId,
@@ -77,6 +74,8 @@ const PostBubble = ({
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const {setSwipedPost} = useFeedContext(); // Use context to get setSwipedPost
   const swipeableRef = useRef(null);
+  const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
+  const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
 
   const renderLeftActions = (progress, dragX) => {
     const scale = dragX.interpolate({
@@ -115,7 +114,7 @@ const PostBubble = ({
 
     try {
       // Construct the URL with postId and userId
-      const toggleLikeUrl = `${apiUrl}/toggle_like/${postId}/${userId}`;
+      const toggleLikeUrl = `${apiUrl}/toggle_like/${postId}/${loggedinUserId}`;
 
       // Send like toggle to backend
       await axios.post(toggleLikeUrl); // No need to send body as postId and userId are in the URL

@@ -5,7 +5,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 
 const Chats = ({navigation}) => {
-  const userId = auth().currentUser ? auth().currentUser.uid : null;
+  const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
 
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
@@ -28,7 +28,7 @@ const Chats = ({navigation}) => {
     conversationId,
     index,
   ) => {
-    const userDetails = await fetchUserDetails(userId);
+    const userDetails = await fetchUserDetails(loggedinUserId);
     const senderDisplayName = userDetails.display_name; // Ensure these match the Firestore document fields
     const senderProfilePic = userDetails.profilePic;
     const senderUsername = userDetails.username;
@@ -36,7 +36,7 @@ const Chats = ({navigation}) => {
 
     // Navigate to ChatScreen with chatId and userId
     navigation.navigate('ChatScreen', {
-      senderUserId: userId,
+      senderUserId: loggedinUserId,
       receiverUserId: otherUserId,
       receiverDisplayName: display_name,
       receiverUsername: username,
@@ -56,7 +56,7 @@ const Chats = ({navigation}) => {
       <ScrollView style={styles.page}>
         <ChatsList
           key="chats-chatslist" // Unique key for the instance in Chats
-          userId={userId}
+          userId={loggedinUserId}
           onChatSelect={handleChatSelect}
           viewOnlyPublic={false}
         />
