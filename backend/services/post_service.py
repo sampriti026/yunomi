@@ -5,6 +5,7 @@ from services.user_services import get_user_details
 from fastapi import HTTPException
 from firebase_admin import firestore
 from services.common_service import find_conversation, find_conversation_with_type
+from services.notif_service import send_like_notification
 from services.message_service import check_weekly_limit
 from google.cloud.firestore import Increment
 from encrypt import encrypt_text, load_key, decrypt_text
@@ -69,13 +70,15 @@ def like_post(post_id: str, user_id: str):
         print(f"An error occurred: {e}")
         return {"status": "failure", "message": "An error occurred while liking the post"}
 
-def toggle_like(post_id: str, user_id: str):
+async def toggle_like(post_id: str, user_id: str):
     try:
         post_ref = db.collection('posts').document(post_id)
         post_doc = post_ref.get()
         if post_doc.exists:
             post_data = post_doc.to_dict()
-            liked_by: List[str] = post_data.get('liked_by', [])
+            liked_by = post_data.get('liked_by', [])
+            post_owner_id = post_data.get('user_id')
+            print(post_owner_id, "post_owner_id", user_id, "user")
             if user_id in liked_by:
                 # User already liked the post, unlike it
                 liked_by.remove(user_id)
@@ -84,7 +87,18 @@ def toggle_like(post_id: str, user_id: str):
                 # User hasn't liked the post, like it
                 liked_by.append(user_id)
                 new_likes = post_data.get('likes', 0) + 1
-            
+                user_details = await get_user_details(user_id)
+                post_owner_details= await get_user_details(post_owner_id)
+                if post_owner_id != user_id:  # Avoid sending notification if the user likes their own post
+                    send_like_notification(
+                        receiver_token= post_owner_details.get('fcm_token'),
+                        post_id = post_id,
+                        user_id=user_id, 
+                        username= user_details.get('username'), 
+                        display_name = user_details.get('display_name'),
+                        profilePic= user_details.get('profilePic'), 
+                    )
+
             # Update the post document
             post_ref.update({'liked_by': liked_by, 'likes': new_likes})
             return {"status": "success", "likes": new_likes}

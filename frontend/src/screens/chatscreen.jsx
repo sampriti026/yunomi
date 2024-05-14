@@ -23,38 +23,32 @@ import {BlurView} from '@react-native-community/blur'; // Import BlurView
 import axios from 'axios';
 const ChatScreen = ({navigation, route}) => {
   const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
-
   const {
-    userId,
-    otherUserId,
-    profilePic,
-    display_name,
+    senderUserId,
+    receiverUserId,
+    receiverDisplayName,
+    receiverUsername,
+    receiverProfilePic,
     isPrivate,
     conversationId,
     index,
     viewOnlyPublic,
+    senderProfilePic,
+    senderDisplayName,
+    senderUsername,
   } = route.params;
+
   const [messages, setMessages] = useState([]);
-  const [userDetails, setUserDetails] = useState(null);
   const [postedMessageIds, setPostedMessageIds] = useState({}); // New state to track posted messages
   const [summary, setSummary] = useState('');
-
   // Get the currently logged-in user's ID
   const loggedInUserId = auth().currentUser ? auth().currentUser.uid : null;
 
   // Check if the logged-in user is a participant in the chat
   const isParticipant =
-    loggedInUserId === userId || loggedInUserId === otherUserId;
-
+    loggedInUserId === senderUserId || loggedInUserId === receiverUserId;
   const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
-  const updateLastRead = () => {
-    const conversationRef = firestore()
-      .collection('conversations')
-      .doc(conversationId);
-    conversationRef.update({
-      [`lastRead.${userId}`]: firestore.FieldValue.serverTimestamp(),
-    });
-  };
+
   const fetchUserDetails = async participantId => {
     // Placeholder function to fetch user details from Firestore
     const userDoc = await firestore()
@@ -70,92 +64,80 @@ const ChatScreen = ({navigation, route}) => {
   const swipeableRefs = useRef({});
 
   useEffect(() => {
-    // Fetch other user's details
-    const fetchDetails = async () => {
-      const userDetails = await fetchUserDetails(userId);
-      if (userDetails) {
-        setUserDetails(userDetails);
-      } else {
-        console.error('Other user details not found');
-        // Handle the case where other user details are not found
-      }
-    };
-    fetchDetails();
-  }, [userId]);
+    if (!isFocused) return; // Check if the screen is focused
+    setMessages([]); // Reset messages when focus or conversation changes
 
-  useEffect(() => {
-    if (!isFocused) return; // Check if the screen is focused and conversationId is valid
-    setMessages([]);
-
-    // Define the fetchConversation function to get the conversation details and set up the listener
     const fetchConversation = async () => {
       if (viewOnlyPublic && index > 0) {
         const userDetails = await fetchUserDetails(loggedInUserId);
-        if (userDetails && userDetails.premium) {
-        } else {
+        if (!userDetails || !userDetails.premium) {
           const unsubscribe = firestore()
             .collection('conversations')
             .doc(conversationId)
             .onSnapshot(documentSnapshot => {
               if (documentSnapshot.exists) {
                 const data = documentSnapshot.data();
-                setSummary(data.summary || '');
+                console.log(
+                  'Subscription status:',
+                  data.summary || 'No summary available',
+                );
               }
             });
+          return unsubscribe; // Return the unsubscribe function to clean up this listener
         }
       }
+
       const conversationDoc = await firestore()
         .collection('conversations')
         .doc(conversationId)
         .get();
 
       if (!conversationDoc.exists) {
+        console.log('No such conversation exists!');
         return;
       }
 
       const {is_private} = conversationDoc.data(); // Retrieve the isPrivate flag
 
       // Set up the listener for the messages subcollection
-      return firestore()
+      const unsubscribe = firestore()
         .collection('conversations')
         .doc(conversationId)
         .collection('messages')
         .orderBy('timestamp')
         .onSnapshot(
           async snapshot => {
-            const updates = snapshot.docs.map(async doc => {
+            const updates = snapshot.docs.map(doc => {
               const messageData = doc.data();
               const convertedTimestamp = messageData.timestamp.toDate(); // Convert Firestore Timestamp to JavaScript Date
 
               if (is_private) {
                 return decryptMessage(messageData.text)
-                  .then(decryptedText => {
-                    return {
-                      ...messageData,
-                      text: decryptedText,
-                      key: doc.id,
-                      timestamp: convertedTimestamp,
-                    };
-                  })
+                  .then(decryptedText => ({
+                    ...messageData,
+                    text: decryptedText,
+                    key: doc.id,
+                    timestamp: convertedTimestamp,
+                  }))
                   .catch(error => {
                     console.error(
                       'Decryption failed for message:',
                       doc.id,
                       error,
-                      messageData.text,
                     );
                     return {
                       ...messageData,
                       text: '[Decryption failed]',
                       key: doc.id,
+                      timestamp: convertedTimestamp,
                     };
                   });
               } else {
-                return Promise.resolve({
+                return {
                   ...messageData,
                   key: doc.id,
-                  timestamp: messageData.timestamp.toDate(),
-                });
+                  timestamp: convertedTimestamp,
+                };
               }
             });
 
@@ -168,7 +150,10 @@ const ChatScreen = ({navigation, route}) => {
             console.error('Error fetching messages:', error);
           },
         );
+
+      return unsubscribe; // Return the unsubscribe function to clean up this listener
     };
+
     let unsubscribeConversation;
     fetchConversation()
       .then(unsubscribe => {
@@ -184,22 +169,89 @@ const ChatScreen = ({navigation, route}) => {
         unsubscribeConversation();
       }
     };
-  }, [conversationId, viewOnlyPublic]);
+  }, [isFocused, conversationId, viewOnlyPublic, index, loggedInUserId]);
 
+  const sendMessage = async text => {
+    const tempMessageId = `temp-${Date.now()}`; // Unique ID for the optimistic message
+    const currentTimestamp = new Date().toISOString(); // Generate a single timestamp
+
+    const optimisticMessage = {
+      text,
+      user_id: loggedInUserId,
+      timestamp: currentTimestamp, // Use current date as the optimistic timestamp
+      key: tempMessageId,
+      status: 'sending', // Indicate that the message is in the process of being sent
+    };
+
+    // Update local state optimistically
+    setMessages(prevMessages => [optimisticMessage, ...prevMessages]);
+
+    const encryptedText = await encryptMessage(text);
+    try {
+      const response = await axios.post(`${apiUrl}/send_message`, {
+        sender_id: loggedInUserId,
+        receiver_id: receiverUserId,
+        text: isPrivate ? encryptedText : text,
+        conversation_id: conversationId,
+        is_private: isPrivate,
+        timestamp: currentTimestamp,
+      });
+
+      const endTime = performance.now();
+    } catch (error) {
+      console.error('Failed to send message:', error);
+
+      // On error, update the optimistic message's status to 'failed'
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.timestamp === currentTimestamp && msg.user_id === loggedInUserId
+            ? {...msg, status: 'failed'}
+            : msg,
+        ),
+      );
+    }
+  };
   useEffect(() => {
     // Set active chat ID when the screen is focused
     const focusListener = navigation.addListener('focus', () => {
       if (!!conversationId) {
         setActiveChatId(conversationId);
       }
+      const updateLastRead = async () => {
+        const conversationRef = firestore()
+          .collection('conversations')
+          .doc(conversationId);
+        const doc = await conversationRef.get();
+        const conversationData = doc.data();
 
+        if (conversationData) {
+          const otherUserLastUpdatedTime = conversationData.last_updated[
+            receiverUserId
+          ]
+            ? conversationData.last_updated[receiverUserId].toDate()
+            : new Date(0); // Default to epoch if not set
+
+          const userLastReadTime =
+            conversationData.lastRead &&
+            conversationData.lastRead[loggedInUserId]
+              ? conversationData.lastRead[loggedInUserId].toDate()
+              : new Date(0); // Default to epoch if not set
+
+          // Update lastRead only if the other user's last updated time is greater than this user's last read time
+          if (otherUserLastUpdatedTime > userLastReadTime) {
+            await conversationRef.update({
+              [`lastRead.${senderUserId}`]:
+                firestore.FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      };
       updateLastRead();
     });
 
     // Remove active chat ID when the screen is blurred (navigated away from)
     const blurListener = navigation.addListener('blur', () => {
       removeActiveChatId();
-      updateLastRead();
     });
 
     return () => {
@@ -229,51 +281,10 @@ const ChatScreen = ({navigation, route}) => {
     };
   }, [conversationId]);
 
-  const sendMessage = async text => {
-    //lGKQ1fkiRQu9BjF3AwfFM/UmI82sAmxa:e8ICPNFCdpbhxvc+qQmHjmMQ+Nvb
-    encryptedText = await encryptMessage(text);
-    try {
-      const response = await axios.post(`${apiUrl}/send_message`, {
-        sender_id: loggedInUserId,
-        receiver_id: otherUserId,
-        text: isPrivate ? encryptedText : text,
-        conversation_id: conversationId,
-        is_private: isPrivate,
-      });
-
-      const responseData = await response.data;
-
-      if (responseData.status === 'success') {
-        // Update the messages state to include the new message
-      } else {
-        if (
-          responseData.detail ===
-          'Cannot start a new conversation due to restrictions.'
-        ) {
-          Alert.alert(
-            'Subscription Required',
-            'Gotta subscribe for premium to send more than three private messages in a week.',
-            [{text: 'OK', onPress: () => console.log('OK Pressed')}],
-          );
-        } else {
-          console.error('Error sending message:', responseData.detail);
-        }
-      }
-    } catch (error) {
-      console.log(error);
-
-      if (
-        error.message === 'Cannot start a new conversation due to restrictions.'
-      ) {
-        Alert.alert(
-          'Subscription Required',
-          'Gotta subscribe for premium to send more than three private messages in a week.',
-          [{text: 'OK', onPress: () => console.log('OK Pressed')}],
-        );
-      }
-    }
-  };
-
+  // LOG  Encryption time: 27.818458000198007 ms
+  // LOG  Total message sending time: 5965.670753000304 ms
+  //  LOG  Encryption time: 16.58633300010115 ms
+  //  LOG  Total message sending time: 3334.1700849998742 ms
   const RightActions = (progress, dragX, messageId) => {
     const trans = dragX.interpolate({
       inputRange: [-100, 0],
@@ -344,19 +355,13 @@ const ChatScreen = ({navigation, route}) => {
     }
   };
 
-  const navigateToProfile = async user => {
-    const userDetails = await fetchUserDetails(user);
-    if (userDetails) {
-      navigation.navigate('ProfileScreen', {
-        userId: user,
-        profilePic: userDetails.profilePic, // Adjust keys as per your API response
-        display_name: userDetails.display_name,
-        username: userDetails.username,
-      });
-    } else {
-      console.error('User details not found');
-      // Handle the case where user details are not found
-    }
+  const navigateToProfile = (userId, profilePic, displayName, username) => {
+    navigation.navigate('ProfileScreen', {
+      userId: userId,
+      profilePic: profilePic, // Adjust keys as per your API response
+      displayName: displayName,
+      username: username,
+    });
   };
 
   return (
@@ -372,27 +377,42 @@ const ChatScreen = ({navigation, route}) => {
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.topBarSection}
-          onPress={() => navigateToProfile(otherUserId)}>
-          <Image source={{uri: profilePic}} style={styles.profilePhoto} />
-          <Text style={styles.profileName}>{display_name}</Text>
+          onPress={() =>
+            navigateToProfile(
+              receiverUserId,
+              receiverProfilePic,
+              receiverDisplayName,
+              receiverUsername,
+            )
+          }>
+          <Image
+            source={{uri: receiverProfilePic}}
+            style={styles.profilePhoto}
+          />
+          <Text style={styles.profileName}>{receiverDisplayName}</Text>
         </TouchableOpacity>
 
-        {userDetails && (
+        {senderProfilePic && (
           <TouchableOpacity
             style={styles.topBarSection}
-            onPress={() => navigateToProfile(userId)}>
-            <Text style={styles.profileName}>{userDetails.display_name}</Text>
+            onPress={() =>
+              navigateToProfile(
+                senderUserId,
+                senderProfilePic,
+                senderDisplayName,
+                senderUsername,
+              )
+            }>
+            <Text style={styles.profileName}>{senderDisplayName}</Text>
             <Image
               source={{
-                uri:
-                  userDetails.profilePic || 'https://via.placeholder.com/150',
+                uri: senderProfilePic || 'https://via.placeholder.com/150',
               }}
               style={styles.profilePhoto}
             />
           </TouchableOpacity>
         )}
       </View>
-
       <FlatList
         data={messages}
         keyExtractor={(item, index) => index.toString()}
@@ -414,7 +434,7 @@ const ChatScreen = ({navigation, route}) => {
             }}
             overshootLeft={false}
             friction={2}>
-            {item.user_id === userId ? (
+            {item.user_id === senderUserId ? (
               <RightBubble text={item.text} timestamp={item.timestamp} />
             ) : (
               <LeftBubble text={item.text} timestamp={item.timestamp} />

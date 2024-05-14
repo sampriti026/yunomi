@@ -54,7 +54,7 @@ const formatTimestamp = isoTimestamp => {
 
 const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 const userId = auth().currentUser ? auth().currentUser.uid : null;
-
+console.log(userId);
 const PostBubble = ({
   postId,
   post_userId,
@@ -214,6 +214,7 @@ const PostBubble = ({
           </Text>
         </View>
       </View>
+      <View style={styles.divider} />
     </View>
   );
 };
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
     paddingTop: 7, // Adjust if necessary
   },
   bubble: {
-    backgroundColor: '#C7ADD0',
+    backgroundColor: '#3C3C3C',
     borderTopRightRadius: 15,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
@@ -270,9 +271,11 @@ const styles = StyleSheet.create({
   repostedDisplayname: {
     fontWeight: 'bold',
     marginBottom: 5,
+    color: 'white',
   },
   text: {
     fontSize: 16,
+    color: 'white',
   },
   timestampInsideBubble: {
     color: 'white',
@@ -309,9 +312,9 @@ const styles = StyleSheet.create({
   divider: {
     borderBottomColor: '#CCC',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    width: '85%',
+    width: '35%',
     marginTop: 10,
-    left: 20,
+    left: 110,
   },
   iconContainer: {},
 });

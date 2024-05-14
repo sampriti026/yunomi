@@ -155,14 +155,17 @@ async def send_message(request):
                 'participants': [request.sender_id, request.receiver_id],
                 'is_private': request.is_private,
                 'last_message': request.text,
-                'last_updated': datetime.utcnow(),
+                'last_updated': {
+                    request.sender_id: datetime.utcnow(),
+                    request.receiver_id: datetime.utcnow()  # Initially set both to the same time when conversation is created
+                },
             })
             conversation_id = conversation_ref.id
             logging.info(f"New conversation created with ID: {conversation_id}")
         else:
             conversation_ref = db.collection('conversations').document(request.conversation_id)
             conversation_ref.update({
-                'last_updated': datetime.utcnow(),
+                f'last_updated.{request.sender_id}': datetime.utcnow(),
                 'last_message': request.text,
             })
             conversation_id = request.conversation_id
@@ -170,6 +173,8 @@ async def send_message(request):
 
         # Get receiver details
         receiver_details = await get_user_details(request.receiver_id)
+        sender_details = await get_user_details(request.sender_id)
+
         if receiver_details:
             receiver_token = receiver_details.get('fcm_token')
             logging.info(f"Receiver token retrieved: {receiver_token}")
@@ -177,12 +182,17 @@ async def send_message(request):
             # If receiver details are found, send a FCM notification
             send_fcm_notification(
                 receiver_token=receiver_token,
-                display_name=receiver_details.get('display_name'),
-                content=request.text,
-                profilePic=receiver_details.get('profilePic'),
+                content=request.text, 
                 conversation_id=conversation_id,
-                sender_id=request.sender_id,
-                isPrivate=request.is_private
+                isPrivate=request.is_private,
+                sender_id=request.sender_id,               
+                sender_display_name=sender_details.get('display_name'),
+                sender_username= sender_details.get('username'),
+                sender_profilePic=sender_details.get('profilePic'),
+                receiver_id=request.receiver_id,
+                receiver_display_name=receiver_details.get('display_name'),
+                receiver_username= receiver_details.get('username'),
+                receiver_profilePic=receiver_details.get('profilePic'),
             )
         else:
             logging.warning("Receiver details not found, notification not sent.")
@@ -193,7 +203,7 @@ async def send_message(request):
             'user_id': request.sender_id,
             'text': request.text,
             'from_bot': False,
-            'timestamp': datetime.utcnow(),
+            'timestamp': request.timestamp,
         })
         logging.info(f"Message added to conversation {conversation_id}")
 

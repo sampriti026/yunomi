@@ -10,8 +10,20 @@ import {BackHandler} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 
 const ProfileScreen = ({route, navigation}) => {
-  const {userId, profilePic, display_name, username} = route.params;
+  const {userId, profilePic, displayName, username} = route.params;
   const [isFabOpen, setIsFabOpen] = useState(false);
+
+  const fetchUserDetails = async participantId => {
+    // Placeholder function to fetch user details from Firestore
+    const userDoc = await firestore()
+      .collection('users')
+      .doc(participantId)
+      .get();
+    if (userDoc.exists) {
+      return {userId: participantId, ...userDoc.data()}; // Include additional user details as needed
+    }
+    return null;
+  };
 
   const yourUserId = auth().currentUser ? auth().currentUser.uid : null;
   const navigateToChatScreen = params => {
@@ -47,25 +59,27 @@ const ProfileScreen = ({route, navigation}) => {
   };
 
   const handleChatSelect = (
-    otherUserId,
-    display_name,
-    username,
-    profilePic,
+    receiverUserId,
+    receiverDisplayName,
+    receiverUsername,
+    receiverProfilePic,
     isPrivate,
     conversationId,
     index,
   ) => {
-    // Now uses navigateToChatScreen with a single argument object
     navigateToChatScreen({
-      userId,
-      otherUserId,
-      display_name,
-      username,
-      profilePic,
+      senderUserId: userId,
+      receiverUserId,
+      receiverDisplayName,
+      receiverUsername,
+      receiverProfilePic,
       isPrivate,
       conversationId,
       index,
       viewOnlyPublic: true,
+      senderProfilePic: profilePic,
+      senderDisplayName: displayName,
+      senderUsername: username,
     });
   };
 
@@ -95,8 +109,8 @@ const ProfileScreen = ({route, navigation}) => {
       userId: yourUserId,
       otherUserId: userId,
       profilePic,
-      display_name,
-      username,
+      displayName,
+      userName,
       isPrivate: isPrivate,
       conversationId,
       viewOnlyPublic,
@@ -109,7 +123,7 @@ const ProfileScreen = ({route, navigation}) => {
         <ProfileDetails
           userId={userId}
           profilePic={profilePic}
-          displayName={display_name}
+          displayName={displayName}
           username={username}
         />
         <ChatsList

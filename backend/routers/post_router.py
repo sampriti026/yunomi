@@ -38,7 +38,7 @@ async def send_post(post: Post):
 
 @router.post("/toggle_like/{post_id}/{user_id}")
 async def toggle_like(post_id: str, user_id: str):
-    response = post_service.toggle_like(post_id, user_id)
+    response = await post_service.toggle_like(post_id, user_id)
     return response
 
 @router.get("/fetch_posts")

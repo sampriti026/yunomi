@@ -28,7 +28,8 @@ async function ensureKeyIsLoaded() {
 
 // Function to encrypt a message using AES
 export const encryptMessage = async message => {
-  await ensureKeyIsLoaded();
+  if (!key) await fetchAndCacheEncryptionKey();
+  if (!key) throw new Error('Encryption key could not be loaded.');
   const keyHex = CryptoJS.enc.Hex.parse(key); // Parse key from hex
   const iv = CryptoJS.lib.WordArray.random(128 / 8); // Generate a 16-byte IV for AES
   const encrypted = CryptoJS.AES.encrypt(message, keyHex, {
@@ -41,7 +42,8 @@ export const encryptMessage = async message => {
 
 // Function to decrypt a message using AES
 export const decryptMessage = async ciphertext => {
-  await ensureKeyIsLoaded();
+  if (!key) await fetchAndCacheEncryptionKey();
+  if (!key) throw new Error('Encryption key could not be loaded.');
   const ivHex = ciphertext.substring(0, 32); // Extract the IV from the ciphertext
   const encryptedText = ciphertext.substring(32); // The rest is the encrypted data
   const keyHex = CryptoJS.enc.Hex.parse(key); // Parse key from hex

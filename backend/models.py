@@ -12,13 +12,13 @@ class Message(BaseModel):
 class ReplyModel(BaseModel):
     user_id: str
     text: str
-    timestamp: str
+    timestamp: datetime
 
 
 class Post(BaseModel):
     user_id: str
     message_id: Optional[str] = None  # Make messageId optional
-    timestamp: str
+    timestamp: datetime
     repost: bool = False
     likes: int = 0
     liked_by: List[str] = []
@@ -35,14 +35,13 @@ class PostReplyRequest(BaseModel):
     text: str
     isPrivate: bool  # Consider validating this as an enum if there are only specific types allowed
 
-
-
 class SendMessageRequest(BaseModel):
     sender_id: str
     receiver_id: str
     text: str
     is_private: bool  # Add this line
     conversation_id: Optional[str] = None
+    timestamp: datetime
 
 
 class UserDetail(BaseModel):

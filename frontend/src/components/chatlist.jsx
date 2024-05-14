@@ -34,12 +34,15 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
         if (querySnapshot) {
           const chatsPromises = querySnapshot.docs.map(async doc => {
             const data = doc.data();
+            const otherUserId = data.participants.find(p => p !== userId); // Assuming participants are stored as an array of userIds
+            const otherUserLastUpdatedTime = data.last_updated[otherUserId]
+              ? data.last_updated[otherUserId].toDate()
+              : new Date(0);
 
-            const lastReadTime =
+            const userLastReadTime =
               data.lastRead && data.lastRead[userId]
                 ? data.lastRead[userId].toDate()
-                : new Date(0); // Convert Firestore timestamp to Date
-            const lastUpdatedTime = data.last_updated.toDate(); // Also convert this to Date
+                : new Date(0);
 
             const participantDetails = await Promise.all(
               data.participants.map(fetchUserDetails),
@@ -53,7 +56,7 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
               last_updated: data.last_updated,
               participants: participantDetails.filter(Boolean),
               is_private: data.is_private,
-              unread: lastUpdatedTime > lastReadTime,
+              unread: otherUserLastUpdatedTime > userLastReadTime,
             };
           });
           const updatedChats = await Promise.all(chatsPromises);

@@ -7,7 +7,7 @@ export const showNotification = (title, message, isPrivate, profilePic) => {
     ticker: 'My Notification Ticker', // (optional)
     autoCancel: true, // (optional) default: true
     largeIcon: profilePic, // (optional) default: "ic_launcher". Use "" for no large icon.
-    smallIcon: 'ic_notification', // (optional) default: "ic_notification". Use "" for no small icon.
+    smallIcon: profilePic, // (optional) default: "ic_notification". Use "" for no small icon.
     bigText: message, // (optional) default: "message" prop
     subText: isPrivate ? 'Private' : 'Public',
     color: 'red', // (optional) default: system default

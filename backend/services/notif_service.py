@@ -1,25 +1,27 @@
 from firebase_admin import messaging
 
-def send_fcm_notification(receiver_token: str, display_name: str, content: str, profilePic: str, conversation_id: str, sender_id: str, isPrivate: bool):
+def send_fcm_notification(receiver_token: str,  content: str, conversation_id: str,  isPrivate: bool, sender_id: str, sender_display_name: str, sender_username: str, sender_profilePic: str, receiver_id: str, receiver_display_name: str, receiver_username: str, receiver_profilePic: str):
     # Define the notification payload
     content = "You have a private message" if isPrivate else content
     print(content, "notif content")
 
-
     message = messaging.Message(
         notification=messaging.Notification(
-            title=display_name,
+            title=sender_display_name,
             body=content,
-            image=profilePic
         ),
         data={
-            "display_name": display_name,
             "content": content,
             "conversationId": conversation_id,
-            "senderId": sender_id,
-            "profilePic": profilePic,
-            "isPrivate": 'true' if isPrivate else 'false'
-
+            "isPrivate": 'true' if isPrivate else 'false',
+            "sender_id": sender_id,
+            "sender_display_name": sender_display_name,
+            "sender_username": sender_username,
+            "sender_profilePic": sender_profilePic,
+            "receiver_id": receiver_id,
+            "receiver_display_name": receiver_display_name,
+            "receiver_username": receiver_username,
+            "receiver_profilePic": receiver_profilePic
         },
         token=receiver_token
     )
@@ -29,3 +31,26 @@ def send_fcm_notification(receiver_token: str, display_name: str, content: str, 
     print(message, "message")
     response = messaging.send(message)
     print('Successfully sent notif:', response)
+
+
+def send_like_notification(receiver_token: str, post_id: str, user_id: str, username: str, display_name: str, profilePic: str, ):
+    try:
+        # Send notification
+        message = messaging.Message(
+            notification=messaging.Notification(
+            title='New Like',
+            body=f'Your post has been liked by user {display_name}!',
+        ),
+        data={
+            "post_id": post_id,
+            "user_id": user_id,
+            "username": username,
+            "display_name": display_name,
+            "profilePic": profilePic        
+            },
+        token=receiver_token
+        )
+        response = messaging.send(message)
+        print('Successfully sent notification:', response)
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
