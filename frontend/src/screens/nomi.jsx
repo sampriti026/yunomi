@@ -1,5 +1,5 @@
 import React, {useRef, useState, useEffect} from 'react';
-import {StyleSheet, View, Animated, PanResponder} from 'react-native';
+import {StyleSheet, View, Animated, PanResponder, Text} from 'react-native';
 import {Color, FontFamily, FontSize} from '../../globalstyles';
 import InputBox from '../components/inputbox';
 import {LeftBubble, RightBubble} from '../components/bubbles';
@@ -9,6 +9,7 @@ import auth from '@react-native-firebase/auth';
 import ContactCard from '../components/contact';
 import {BackHandler, ToastAndroid} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import {TypingIndicator} from '../components/typingIndicator';
 
 const Nomi = ({navigation}) => {
   const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
@@ -18,6 +19,7 @@ const Nomi = ({navigation}) => {
   const [activeLabel, setActiveLabel] = useState('nomi');
   const scrollViewRef = useRef(null);
   const [lastBackPressed, setLastBackPressed] = useState(0);
+  const [isBotTyping, setIsBotTyping] = useState(false);
 
   const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 
@@ -50,28 +52,30 @@ const Nomi = ({navigation}) => {
       timestamp: new Date().toISOString(),
     };
     setMessages(prevMessages => [...prevMessages, userMessage]);
+    setIsBotTyping(true);
 
     try {
       const response = await axios.post(`${apiUrl}/receive_message`, {
-        user_id: userId,
+        user_id: loggedinUserId,
         text: userInput,
       });
 
-      if (response.data && response.data.length > 0) {
-        // Directly add the new messages from the response to the state
-        const newMessages = response.data.map(item => ({
-          ...item, // Spread all properties from the item
-          timestamp: new Date().toISOString(), // Ensure each message has a timestamp
-          from_bot: true, // Mark as from the bot, assuming all responses are bot messages
-        }));
+      setTimeout(() => {
+        if (response.data && response.data.length > 0) {
+          const newMessages = response.data.map(item => ({
+            ...item,
+            timestamp: new Date().toISOString(),
+            from_bot: true,
+          }));
 
-        setMessages(prevMessages => [...prevMessages, ...newMessages]);
-      }
-
-      setUserInput(''); // Clear the user input
+          setMessages(prevMessages => [...prevMessages, ...newMessages]);
+        }
+        setIsBotTyping(false); // Stop typing indicator
+        setUserInput(''); // Clear the user input
+      }, 1000); // Adjust delay as needed
     } catch (error) {
       console.error('Error sending message:', error);
-      // Optionally handle the message removal or error display
+      setIsBotTyping(false); // Stop typing indicator if there's an error
     }
   };
 
@@ -236,6 +240,20 @@ const Nomi = ({navigation}) => {
             );
           }
         })}
+        {isBotTyping && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginVertical: 10,
+            }}>
+            <Text style={{marginRight: 5, color: 'white', marginLeft: 20}}>
+              looking for someone
+            </Text>
+            <TypingIndicator />
+          </View>
+        )}
+
         <View style={{height: 70}} />
       </ScrollView>
 
