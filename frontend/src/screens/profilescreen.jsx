@@ -27,7 +27,7 @@ const ProfileScreen = ({route, navigation}) => {
 
   const yourUserId = auth().currentUser ? auth().currentUser.uid : null;
   const navigateToChatScreen = params => {
-    navigation.navigate('ChatScreen', params);
+    navigation.push('ChatScreen', params);
   };
   const findConversationId = async (userId, otherUserId, isPrivate) => {
     try {

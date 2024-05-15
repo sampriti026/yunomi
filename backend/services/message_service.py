@@ -1,4 +1,5 @@
 from dependencies import db
+from openai import AsyncOpenAI
 from services.common_service import generate_text
 from services.user_services import get_user_details
 from fastapi import FastAPI, HTTPException
@@ -13,14 +14,19 @@ from datetime import datetime, timezone
 from services.milvus import find_top_matching_users
 import os
 import logging
-
+import time
+import openai
+import json
 # Set up logging
 logging.basicConfig(level=logging.INFO)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Access the encryption key from environment variable
 encryption_key = os.getenv('ENCRYPTION_KEY')
 
-
+openai = AsyncOpenAI(
+    api_key=OPENAI_API_KEY
+)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -28,13 +34,35 @@ logger = logging.getLogger(__name__)
 
 key = encryption_key
 
+tools = [
+    {
+        "type": "function",
+        "function": {
+        "name": "find_top_matching_users",
+        "description": "Find top matching users based on the user's message",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "original_prompt": {
+                    "type": "string",
+                    "description": "The original message from the user"
+                },
+                "current_user_id": {
+                    "type": "string",
+                    "description": "The ID of the current user"
+                },
+                "current_message_id": {
+                    "type": "string",
+                    "description": "The ID of the current message"
+                }
+            },
+            "required": ["original_prompt", "current_user_id", "current_message_id"]
+        },
+    }
+    }
+]
 
 
-previous_messages = []
-
-base_prompt = ("You are Nomi,a bot for the Yunomi social application. Whenever any user logs in ensure that. "
-               "Engage the user in a lively conversation, ask about their hobbies, what they like doing, who they want to connect with, and whether they're looking for long-term friendships or casual connections. "
-               "Remember to keep the conversation engaging and relevant and answer only in short sentences using genz lingo. keep the conversation short")
 
 
 async def get_or_create_conversation(user_id: str):
@@ -57,30 +85,60 @@ async def get_or_create_conversation(user_id: str):
 
 
 async def receive_message(message):
+    start_time = time.time()  # Start timing
+
+    user_id = message.user_id
+    text = message.text
     # First, save the user's message
-    message_id = save_message(user_id=message.user_id, text=message.text, from_bot=False)
-    responses = []      
+    message_id = save_message(user_id=user_id, text=text, from_bot=False)
 
-    # Directly find top matching users for the received message
-    async for matched_users in find_top_matching_users(message.text, message.user_id, message_id):
-        if matched_users:
-            save_message(user_id=message.user_id, text=matched_users["text"], from_bot=True, matched_user_id=matched_users["matched_user_id"], display_name=matched_users["display_name"], profilePic=matched_users["profilePic"])
-            responses.append(matched_users)
-            print(responses, "final response")
+    openai_message = [
+    {"role": "system", "content": "You are a bot that helps connect people with someone who understands them. You should only call the find_top_matching_users function when a user explicitly expresses interest in connecting with others."},
+        {"role": "user", "content": f"{text}\n\nUser ID: {user_id}, Message ID: {message_id}"}
+    ]
+    response = await openai.chat.completions.create(
+        model="gpt-4o",
+        messages=openai_message,
+        tools=tools,
+        tool_choice="auto"  # The model will decide when to call functions
+    )
+    responses = []  
 
+    if response.choices[0].finish_reason == "tool_calls":
+        tool_calls = response.choices[0].message.tool_calls[0].function
+        if tool_calls.name == 'find_top_matching_users':
+            parameters = json.loads(tool_calls.arguments)
+            original_prompt = parameters['original_prompt']
+            current_user_id = parameters['current_user_id']
+            current_message_id = parameters['current_message_id']
+            # Directly find top matching users for the received message
+            end_time_function = time.time()  # Start timing
+            total_time_function = end_time_function - start_time  # Calculate total time taken
+            print(f"Total time till callign the funciton: {total_time_function:.2f} seconds")  # Optionally print or log the time
 
-    if not responses:
-    # No matches found, inform the user
-        user_response = "Hmm, looks like no one is quite like you in this app. I will let you know when we find one."
-        save_message(user_id=message.user_id, text=user_response, from_bot=True)
-        return [{"text": user_response}]  # Wrap in a list for consistent response structure
-    print(responses, "final response")
+            async for matched_users in find_top_matching_users(original_prompt, current_user_id, current_message_id):
+                if matched_users.get("matched_user_id"):
+                    end_time_matched = time.time()
+                    save_message(user_id=user_id, text=matched_users["text"], from_bot=True, matched_user_id=matched_users["matched_user_id"], display_name=matched_users["display_name"], profilePic=matched_users["profilePic"])
+                    responses.append(matched_users)
+                    total_time_matched = end_time_matched - end_time_function
+                    print(f"Total time from callign the find_top till getting the matched userId: {total_time_matched:.2f} seconds")  # Optionally print or log the time
+                else:
+                    save_message(user_id=user_id, text=matched_users["text"], from_bot=True)
+                    responses.append({"text": matched_users["text"]})
+                    print("after nothing was found in find top matching users", responses)  # Wrap in a list for consistent response structure
+    else:
+        responses = {"text": response.choices[0].message.content}
+        save_message(user_id=user_id, text=responses["text"], from_bot=True)
+
+    end_time = time.time()  # End timing
+    total_time = end_time - start_time  # Calculate total time taken
+    print(f"Total processing time: {total_time:.2f} seconds")  # Optionally print or log the time
     return responses
 
 
 
 def save_message(user_id, text, from_bot, matched_users=None, **kwargs):
-
     # Construct the base message document to be saved
     message_data = {
         'conversationId': f"{user_id}_bot",
@@ -91,17 +149,12 @@ def save_message(user_id, text, from_bot, matched_users=None, **kwargs):
         **kwargs  # This adds any additional keyword arguments to message_data
 
     }
-    
-    # If there are matched user details, include them in the message data
     if matched_users:
-        # Assuming matched_users is a list of dictionaries with 'user_id' and 'original_message_text'
         message_data['matched_users'] = matched_users
 
     # Save the message in Firestore
     doc_ref = db.collection('messages').add(message_data)
-    
-    # Return the message ID (document ID)
-    return doc_ref[1].id  # doc_ref[1] is the DocumentReference, from which you can get the id
+    return doc_ref[1].id  
 
 
 def format_matched_users_response(matched_users):

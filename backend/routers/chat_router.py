@@ -35,7 +35,6 @@ async def send_message(request: SendMessageRequest):
     return result
 
 
-
 @router.get("/fetchBotConversation/{user_id}")
 async def fetchBotConversation(user_id: str):
     response = await message_service.fetch_bot_conversation(user_id)

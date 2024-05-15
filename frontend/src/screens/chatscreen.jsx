@@ -19,7 +19,7 @@ import {encryptMessage, decryptMessage} from '../services.jsx/encrypt';
 import firestore from '@react-native-firebase/firestore';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import {useIsFocused} from '@react-navigation/native';
-import {BlurView} from '@react-native-community/blur'; // Import BlurView
+import {BlurView} from '@react-native-community/blur';
 import axios from 'axios';
 const ChatScreen = ({navigation, route}) => {
   const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
@@ -66,24 +66,22 @@ const ChatScreen = ({navigation, route}) => {
   useEffect(() => {
     if (!isFocused) return; // Check if the screen is focused
     setMessages([]); // Reset messages when focus or conversation changes
+    let unsubscribeSummary;
+    let unsubscribeMessages;
 
     const fetchConversation = async () => {
-      if (viewOnlyPublic && index > 0) {
+      if (viewOnlyPublic & (index > 0)) {
         const userDetails = await fetchUserDetails(loggedInUserId);
         if (!userDetails || !userDetails.premium) {
-          const unsubscribe = firestore()
+          const unsubscribeSummary = firestore()
             .collection('conversations')
             .doc(conversationId)
             .onSnapshot(documentSnapshot => {
               if (documentSnapshot.exists) {
                 const data = documentSnapshot.data();
-                console.log(
-                  'Subscription status:',
-                  data.summary || 'No summary available',
-                );
+                setSummary(data.summary);
               }
             });
-          return unsubscribe; // Return the unsubscribe function to clean up this listener
         }
       }
 
@@ -100,7 +98,7 @@ const ChatScreen = ({navigation, route}) => {
       const {is_private} = conversationDoc.data(); // Retrieve the isPrivate flag
 
       // Set up the listener for the messages subcollection
-      const unsubscribe = firestore()
+      const unsubscribeMessages = firestore()
         .collection('conversations')
         .doc(conversationId)
         .collection('messages')
@@ -150,24 +148,16 @@ const ChatScreen = ({navigation, route}) => {
             console.error('Error fetching messages:', error);
           },
         );
-
-      return unsubscribe; // Return the unsubscribe function to clean up this listener
     };
 
-    let unsubscribeConversation;
-    fetchConversation()
-      .then(unsubscribe => {
-        unsubscribeConversation = unsubscribe;
-      })
-      .catch(error => {
-        console.error('Failed to set up conversation listener:', error);
-      });
+    fetchConversation().catch(error => {
+      console.error('Failed to set up conversation listener:', error);
+    });
 
     // Cleanup function
     return () => {
-      if (unsubscribeConversation) {
-        unsubscribeConversation();
-      }
+      if (unsubscribeSummary) unsubscribeSummary();
+      if (unsubscribeMessages) unsubscribeMessages();
     };
   }, [isFocused, conversationId, viewOnlyPublic, index, loggedInUserId]);
 
@@ -281,10 +271,6 @@ const ChatScreen = ({navigation, route}) => {
     };
   }, [conversationId]);
 
-  // LOG  Encryption time: 27.818458000198007 ms
-  // LOG  Total message sending time: 5965.670753000304 ms
-  //  LOG  Encryption time: 16.58633300010115 ms
-  //  LOG  Total message sending time: 3334.1700849998742 ms
   const RightActions = (progress, dragX, messageId) => {
     const trans = dragX.interpolate({
       inputRange: [-100, 0],
@@ -413,6 +399,7 @@ const ChatScreen = ({navigation, route}) => {
           </TouchableOpacity>
         )}
       </View>
+
       <FlatList
         data={messages}
         keyExtractor={(item, index) => index.toString()}
@@ -442,18 +429,16 @@ const ChatScreen = ({navigation, route}) => {
           </Swipeable>
         )}
       />
-      {isParticipant && <InputBox sendMessage={sendMessage} />}
       {summary && (
         <>
           <BlurView style={styles.absolute} blurType="light" blurAmount={1} />
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryText}>{summary}</Text>
-            <Text style={styles.summaryText}>
-              Get premium to read their chat.
-            </Text>
+            <Text style={{color: 'grey'}}>Get premium to read their chat.</Text>
           </View>
         </>
       )}
+      {isParticipant && <InputBox sendMessage={sendMessage} />}
     </View>
   );
 };

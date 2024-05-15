@@ -1,9 +1,14 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from pydantic import BaseModel
-import requests
+from fastapi import FastAPI
 from routers import chat_router, user_router, post_router, notif_router
-from models import TextInput
-from services.common_service import update_embeddings_with_messages
+from services.ai import scheduled_function
+from fastapi import FastAPI
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from dotenv import load_dotenv
+import schedule
+import time
+from threading import Thread
+
+load_dotenv()  # This loads the environment variables from .env.
 
 app = FastAPI()
 
@@ -14,36 +19,24 @@ app.include_router(user_router.router)
 app.include_router(post_router.router)
 
 app.include_router(notif_router.router)
-from dotenv import load_dotenv
 
-load_dotenv()  # This loads the environment variables from .env.
+scheduler = AsyncIOScheduler(timezone="UTC")
 
+def run_scheduler():
+    schedule.every().day.at("20:20").do(scheduled_function)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
-
-
-@app.post("/get_embedding/")
-def get_embedding(text_input: TextInput):
-    print("get_embedding called with text:", text_input.text)  # Debug print
-    try:
-        print("Sending request to embedding model server")  # Debug print
-        response = requests.post(
-            "http://127.0.0.1:8080/embed",
-            json={"inputs": text_input.text},
-            headers={'Content-Type': 'application/json'},
-            timeout=10  # Timeout added
-        )
-        print("Received response with status:", response.status_code)  # Debug print
-        response.raise_for_status()
-        embedding = response.json()
-        return embedding
-    except requests.RequestException as e:
-        print("Error occurred:", e)  # Debug print
-        raise HTTPException(status_code=500, detail=str(e))
+# Start the scheduler in a separate thread
+Thread(target=run_scheduler, daemon=True).start()
 
 @app.get("/")
-def read_root(background_tasks: BackgroundTasks):
-    background_tasks.add_task(update_embeddings_with_messages)
-    return {"message": "Task is running in the background"}
+async def read_root():
+    return {"message": "Hello, world!"}
+
+
+
 
 #uvicorn your_project.main:app --reload
 

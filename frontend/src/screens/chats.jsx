@@ -35,7 +35,7 @@ const Chats = ({navigation}) => {
     // Extract chatId and other participant's ID
 
     // Navigate to ChatScreen with chatId and userId
-    navigation.navigate('ChatScreen', {
+    navigation.push('ChatScreen', {
       senderUserId: loggedinUserId,
       receiverUserId: otherUserId,
       receiverDisplayName: display_name,
