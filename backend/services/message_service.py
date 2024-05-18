@@ -93,7 +93,7 @@ async def receive_message(message):
     message_id = save_message(user_id=user_id, text=text, from_bot=False)
 
     openai_message = [
-    {"role": "system", "content": "You are a bot that helps connect people with someone who understands them. You should only call the find_top_matching_users function when a user explicitly expresses interest in connecting with others."},
+    {"role": "system", "content": "You are a bot that helps connect people with someone who understands them. You should only call the find_top_matching_users function when a user explicitly expresses interest in connecting with others. If the user says anythogn else, have conversation with them trying to understand more about them"},
         {"role": "user", "content": f"{text}\n\nUser ID: {user_id}, Message ID: {message_id}"}
     ]
     response = await openai.chat.completions.create(

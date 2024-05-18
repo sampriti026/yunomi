@@ -140,6 +140,7 @@ const ChatScreen = ({navigation, route}) => {
     let unsubscribeMessages;
 
     const fetchConversation = async () => {
+      console.log('fetchConversation', conversationId);
       if (viewOnlyPublic & (index > 0)) {
         const userDetails = await fetchUserDetails(loggedInUserId);
         if (!userDetails || !userDetails.premium) {
@@ -175,9 +176,20 @@ const ChatScreen = ({navigation, route}) => {
         .orderBy('timestamp')
         .onSnapshot(
           async snapshot => {
-            const updates = snapshot.docs.map(doc => {
+            const updates = snapshot.docs.map(async doc => {
               const messageData = doc.data();
               const convertedTimestamp = messageData.timestamp.toDate(); // Convert Firestore Timestamp to JavaScript Date
+
+              let postContent = '';
+              if (messageData.post_id) {
+                const postDoc = await firestore()
+                  .collection('posts')
+                  .doc(messageData.post_id)
+                  .get();
+                if (postDoc.exists) {
+                  postContent = postDoc.data().content;
+                }
+              }
 
               if (is_private) {
                 return decryptMessage(messageData.text)
@@ -186,6 +198,7 @@ const ChatScreen = ({navigation, route}) => {
                     text: decryptedText,
                     key: doc.id,
                     timestamp: convertedTimestamp,
+                    postContent,
                   }))
                   .catch(error => {
                     console.error(
@@ -198,6 +211,7 @@ const ChatScreen = ({navigation, route}) => {
                       text: '[Decryption failed]',
                       key: doc.id,
                       timestamp: convertedTimestamp,
+                      postContent,
                     };
                   });
               } else {
@@ -205,11 +219,13 @@ const ChatScreen = ({navigation, route}) => {
                   ...messageData,
                   key: doc.id,
                   timestamp: convertedTimestamp,
+                  postContent,
                 };
               }
             });
 
             const fetchedMessages = await Promise.all(updates);
+            console.log(fetchedMessages);
             setMessages(
               fetchedMessages.sort((a, b) => b.timestamp - a.timestamp),
             );
@@ -223,7 +239,6 @@ const ChatScreen = ({navigation, route}) => {
     fetchConversation().catch(error => {
       console.error('Failed to set up conversation listener:', error);
     });
-
     // Cleanup function
     return () => {
       if (unsubscribeSummary) unsubscribeSummary();
@@ -283,7 +298,6 @@ const ChatScreen = ({navigation, route}) => {
           .doc(conversationId);
         const doc = await conversationRef.get();
         const conversationData = doc.data();
-
         if (conversationData) {
           const otherUserLastUpdatedTime = conversationData.last_updated[
             receiverUserId
@@ -492,9 +506,17 @@ const ChatScreen = ({navigation, route}) => {
             overshootLeft={false}
             friction={2}>
             {item.user_id === senderUserId ? (
-              <RightBubble text={item.text} timestamp={item.timestamp} />
+              <RightBubble
+                text={item.text}
+                timestamp={item.timestamp}
+                postContent={item.postContent}
+              />
             ) : (
-              <LeftBubble text={item.text} timestamp={item.timestamp} />
+              <LeftBubble
+                text={item.text}
+                timestamp={item.timestamp}
+                postContent={item.postContent}
+              />
             )}
           </Swipeable>
         )}

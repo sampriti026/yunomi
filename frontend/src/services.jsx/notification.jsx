@@ -11,7 +11,18 @@ const setupForegroundMessageHandler = navigation => {
       return; // Skip showing the notification
     }
 
-    if (notificationData.post_id && notificationData.user_id) {
+    if (notificationData.reply_content) {
+      // Handling reply to post notification
+
+      const isPrivate = notificationData.isPrivate === 'true';
+      await showNotification(
+        navigation,
+        isPrivate,
+        notificationData.sender_display_name + ' sent a reply to your post.', // Using dynamic title from notification
+        notificationData.reply_content, // Displaying reply content
+        remoteMessage.data,
+      );
+    } else if (notificationData.post_id && notificationData.user_id) {
       // This assumes your like notification has post_id and user_id fields
 
       await showNotification(
@@ -35,8 +46,36 @@ const setupForegroundMessageHandler = navigation => {
 
   const onNotificationOpened = messaging().onNotificationOpenedApp(
     remoteMessage => {
+      const {
+        conversationId,
+        sender_id,
+        receiver_id,
+        receiver_display_name,
+        receiver_username,
+        receiver_profilePic,
+        sender_profilePic,
+        sender_display_name,
+        sender_username,
+        isPrivate,
+      } = remoteMessage.data;
       // Determine if it's a like notification
-      if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
+      if (remoteMessage.data.reply_content) {
+        // Handling reply to post notification
+        navigation.navigate('ChatScreen', {
+          senderUserId: receiver_id,
+          receiverUserId: sender_id,
+          receiverDisplayName: sender_display_name,
+          receiverUsername: sender_username,
+          receiverProfilePic: sender_profilePic,
+          isPrivate,
+          conversationId,
+          index: 0,
+          viewOnlyPublic: false,
+          senderProfilePic: receiver_profilePic,
+          senderDisplayName: receiver_display_name,
+          senderUsername: receiver_username,
+        });
+      } else if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
         navigation.navigate('ProfileScreen', {
           userId: remoteMessage.data.user_id, // Assuming you have a user ID field
           displayName: remoteMessage.data.display_name,

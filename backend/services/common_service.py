@@ -5,10 +5,12 @@ import numpy as np
 import openai
 import requests
 from fastapi import FastAPI, HTTPException
-from models import Query
 import json
 import httpx
 from openai import AsyncOpenAI
+import firebase_admin
+from firebase_admin import credentials, firestore
+
 
 
 
@@ -97,24 +99,28 @@ def find_conversation(participant1, participant2):
             return conversation.id
     return None
 
-def find_conversation_with_type(participant1, participant2, is_private):
+async def find_conversation_with_type(participant1, participant2, is_private):
     """
-    Find a conversation between two participants with a specific privacy setting.
+    Asynchronously find a conversation between two participants with a specific privacy setting.
     """
     conversations_ref = db.collection('conversations')
+    query = conversations_ref \
+        .where(field_path='participants', op_string='array_contains', value=participant1) \
+        .where(field_path='is_private', op_string='==', value=is_private)
     
-    # First, filter conversations that include participant1 and match the is_private setting
-    conversations = conversations_ref \
-        .where('participants', 'array_contains', participant1) \
-        .where('is_private', '==', is_private) \
-        .stream()
-    
-    for conversation in conversations:
-        conversation_data = conversation.to_dict()
-        participants = conversation_data.get('participants', [])
-        # Check if participant2 is also in the conversation
-        if participant2 in participants:
-            return conversation.id
+    try:
+        conversations = query.get()  # This should be awaited, and it returns an awaitable object
+        for conversation in conversations:
+            conversation_data = conversation.to_dict()
+            participants = conversation_data.get('participants', [])
+            if participant2 in participants:
+                print(conversation.id)
+                return conversation.id
+    except Exception as e:
+        print(f"Error retrieving or processing conversations: {e}")
+        return None
+    print(conversation.id)
+
     return None
 
 

@@ -18,72 +18,43 @@ const formatTimestamp = isoTimestamp => {
 
   return `${formattedHours}:${formattedMinutes} ${amOrPm}`;
 };
+const RightBubble = ({text, timestamp, postContent}) => {
+  return (
+    <View style={styles.rightContainer}>
+      <View style={styles.rightBubble}>
+        {postContent && (
+          <Text numberOfLines={1} style={styles.postText}>
+            {postContent}
+          </Text>
+        )}
 
-// const formatTimestamp = isoTimestamp => {
-//   const postDate = new Date(isoTimestamp);
-//   const now = new Date();
-//   const diffMs = now - postDate; // milliseconds difference
-//   const diffMins = Math.round(diffMs / 60000); // minutes difference
-//   const diffHours = Math.round(diffMs / 3600000); // hours difference
-//   const diffDays = Math.round(diffMs / 86400000); // days difference
-
-//   if (diffMins < 60) {
-//     return `${diffMins}m`;
-//   } else if (diffHours < 24) {
-//     return `${diffHours}h`;
-//   } else {
-//     // Format the date as "Feb 8"
-//     const monthNames = [
-//       'Jan',
-//       'Feb',
-//       'Mar',
-//       'Apr',
-//       'May',
-//       'Jun',
-//       'Jul',
-//       'Aug',
-//       'Sep',
-//       'Oct',
-//       'Nov',
-//       'Dec',
-//     ];
-//     const date = postDate.getDate();
-//     const monthIndex = postDate.getMonth();
-//     const year = postDate.getFullYear();
-//     const currentYear = now.getFullYear();
-
-//     // Use substring to get the last two digits of the year
-//     const yearShortForm = year.toString().substring(2);
-
-//     // If the post was made in a different year, include the year in the format.
-//     if (year < currentYear) {
-//       return `${monthNames[monthIndex]} ${date}, '${yearShortForm}`;
-//     }
-//     return `${monthNames[monthIndex]} ${date}`;
-//   }
-// };
-
-const RightBubble = ({text, timestamp}) => (
-  <View style={styles.rightContainer}>
-    <View style={styles.rightBubble}>
-      <Text style={styles.rightText}>{text}</Text>
-      <View style={styles.footer}>
-        <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
+        <Text style={styles.rightText}>{text}</Text>
+        <View style={styles.footer}>
+          <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
-const LeftBubble = ({text, timestamp}) => (
-  <View style={styles.leftContainer}>
-    <View style={styles.leftBubble}>
-      <Text style={styles.leftText}>{text}</Text>
-      <View style={styles.footer}>
-        <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
+const LeftBubble = ({text, timestamp, postContent}) => {
+  return (
+    <View style={styles.leftContainer}>
+      <View style={styles.leftBubble}>
+        {postContent && (
+          <Text numberOfLines={1} style={styles.postText}>
+            {postContent}
+          </Text>
+        )}
+
+        <Text style={styles.leftText}>{text}</Text>
+        <View style={styles.footer}>
+          <Text style={styles.timestamp}>{formatTimestamp(timestamp)}</Text>
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   rightContainer: {
@@ -149,6 +120,19 @@ const styles = StyleSheet.create({
   optionButtonText: {
     color: 'white',
     fontSize: 12,
+  },
+  postPreview: {
+    backgroundColor: '#ececec', // Light grey
+    padding: 8,
+    borderRadius: 5,
+    marginBottom: 2,
+  },
+  postText: {
+    color: '#cccccc', // Lighter text color for post content
+    paddingBottom: 5, // Space between post content and main message
+    borderBottomColor: '#666666', // Border color
+    borderBottomWidth: 1, // Border width
+    marginBottom: 5, // Margin below the border
   },
 });
 

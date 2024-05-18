@@ -66,8 +66,6 @@ async def find_top_matching_users(original_prompt, current_user_id, current_mess
     search_params = {
     'params':{
     'metric_type': 'COSINE',
-            'radius': 0.5,
-            'range_filter': 1
         }
     },
     collection_name="prompts",

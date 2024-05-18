@@ -10,19 +10,12 @@ import {
 import axios from 'axios';
 import auth from '@react-native-firebase/auth';
 import {updateFcmToken} from './updatefcm';
+import {useAuth} from '../../authcontext';
 
 // Individual step component
 
 // Main multi-step form component
-const MultiStepForm = ({
-  setMessage,
-  navigation,
-  apiUrl,
-  isSignUpViaGoogle,
-  googleId,
-  firebaseUid,
-  email,
-}) => {
+const MultiStepForm = ({setMessage, navigation, apiUrl, googleData}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     display_name: '',
@@ -33,18 +26,19 @@ const MultiStepForm = ({
   const [formError, setFormError] = useState('');
 
   const [usernameError, setUsernameError] = useState(''); // New state for username error
+  const {isSignUpViaGoogle, setIsSignUpViaGoogle, setIsSignedIn} = useAuth(); // Access the state from Context
 
   useEffect(() => {
     if (isSignUpViaGoogle) {
       setFormData(prevFormData => ({
         ...prevFormData,
-        google_user_id: googleId,
-        firebase_uid: firebaseUid,
-        email: email,
+        google_user_id: googleData.googleId,
+        email: googleData.email,
+        firebase_uid: googleData.firebase_uid,
       }));
     }
     setMessage('');
-  }, [googleId, firebaseUid, isSignUpViaGoogle]);
+  }, [googleData, isSignUpViaGoogle]);
 
   const checkUsernameExists = async username => {
     if (!username.trim()) return; // Skip check if username is empty
@@ -176,11 +170,12 @@ const MultiStepForm = ({
         await axios.post(`${apiUrl}/create_user/`, userData);
         await updateFcmToken(firebaseUID, apiUrl);
       } else {
-        await axios.post(`${apiUrl}/create_user/`, formData);
-        await updateFcmToken(firebaseUid, apiUrl);
+        const response = await axios.post(`${apiUrl}/create_user/`, formData);
+        if (response.status === 200) {
+          await updateFcmToken(formData.firebaseUid, apiUrl);
+          setIsSignedIn(true); // Set signed in true after API success
+        }
       }
-
-      navigation.navigate('FrameTabsScreen');
     } catch (error) {
       // Handle both axios errors and potential 404 from username check
       if (error.response) {

@@ -118,7 +118,7 @@ const PostBubble = ({
     navigation.navigate('ProfileScreen', {
       userId: userId,
       profilePic: repost ? repostedUserLogo : userLogo, // Adjust keys as per your API response
-      display_name: repost ? repostedDisplayname : displayname,
+      displayName: repost ? repostedDisplayname : displayname,
       username: repost ? repostedUsername : username,
     });
   };

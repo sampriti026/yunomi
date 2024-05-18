@@ -1,23 +1,17 @@
 from datetime import datetime
 from dependencies import db
-from typing import List
 from services.user_services import get_user_details
 from fastapi import HTTPException
 from firebase_admin import firestore
-from services.common_service import find_conversation, find_conversation_with_type
-from services.notif_service import send_like_notification
+from services.common_service import find_conversation_with_type
+from services.notif_service import send_like_notification, send_reply_post_notification
 from services.message_service import check_weekly_limit
 from google.cloud.firestore import Increment
-from encrypt import encrypt_text, load_key, decrypt_text
-import os
-
-# Access the encryption key from environment variable
-encryption_key = os.getenv('ENCRYPTION_KEY')
-
-
+from firebase_admin import firestore
+from datetime import datetime
 from models import Post
 
-key = encryption_key
+
 
 def send_post(post: Post):
     try:
@@ -90,6 +84,7 @@ async def toggle_like(post_id: str, user_id: str):
                 user_details = await get_user_details(user_id)
                 post_owner_details= await get_user_details(post_owner_id)
                 if post_owner_id != user_id:  # Avoid sending notification if the user likes their own post
+                    print("asdf")
                     send_like_notification(
                         receiver_token= post_owner_details.get('fcm_token'),
                         post_id = post_id,
@@ -174,7 +169,6 @@ async def fetch_posts():
                 result.append({
                     "postId": post_id,
                     "post_userId": post_userId,
-
                     "displayname": user_details.get('display_name', ''),
                     "text": post_data.get('content', ''),
                     "timestamp": post_data.get('timestamp', ''),
@@ -189,31 +183,34 @@ async def fetch_posts():
         raise HTTPException(status_code=500, detail=str(e))
 
 async def find_and_update_conversation(user_id, post_user_id, isPrivate, text):
-    conversation_id = find_conversation_with_type(user_id, post_user_id, isPrivate)
+    conversation_id = await find_conversation_with_type(user_id, post_user_id, isPrivate)
     
     if isPrivate:
         if conversation_id is None:
             can_send = await check_weekly_limit(user_id, post_user_id)
             if not can_send:
-                return {"status": "error", "message": "Cannot start a new conversation due to restrictions."}
+                return {"status": "error", "message": "Need to buy premium."}
 
-    message = encrypt_text(text, key) if isPrivate else text
     
     if conversation_id:
         # Update the existing conversation
         conversation_ref = db.collection('conversations').document(conversation_id)
-        await conversation_ref.update({
-            'last_updated': datetime.utcnow(),
-            'last_message': message,  # Store encrypted text for private conversations
+        conversation_ref.update({
+            f'last_updated.{user_id}': datetime.utcnow(),
+            'last_message': text,  # Store encrypted text for private conversations
         })
     else:
         # Create a new conversation document
         conversation_ref = db.collection('conversations').document()
-        await conversation_ref.set({
+        conversation_ref.set({
             'participants': [user_id, post_user_id],
             'last_updated': datetime.utcnow(),
             'is_private': isPrivate,
-            'last_message': message,  # Store encrypted text for private conversations
+            'last_updated': {
+                    user_id: datetime.utcnow(),
+                    post_user_id: datetime.utcnow()  # Initially set both to the same time when conversation is created
+                },
+            'last_message': text, 
         })
         conversation_id = conversation_ref.id
 
@@ -230,26 +227,23 @@ async def update_post_reply_count(post_id):
     post_ref.update({'reply_count': Increment(1)})
 
 
-
-
 async def post_reply(user_id, post_id, post_user_id, text, isPrivate):
     # Encrypt text if the conversation is private
-    encrypted_text = encrypt_text(text, key) if isPrivate else text
-    print(f"Encrypted text: {encrypted_text}")
 
-    conversation_id = find_and_update_conversation(user_id, post_user_id, isPrivate, text)
+    conversation_id = await find_and_update_conversation(user_id, post_user_id, isPrivate, text)
     
     # Add the encrypted or plain text to the conversation's messages
-    conversation_messages_ref = db.collection('conversations').document(conversation_id).collection('messages')
-    message_doc = conversation_messages_ref.add({
+    conversation_messages_ref =  db.collection('conversations').document(conversation_id).collection('messages')
+    message_doc =  conversation_messages_ref.add({
         'user_id': user_id,
-        'text': encrypted_text,  # Use encrypted text for private messages
+        'text': text,  # Use encrypted text for private messages
         'from_bot': False,
         'timestamp': datetime.utcnow(),
+        'post_id': post_id
     })
 
     # Handling public replies differently is not necessary here since encryption is applied based on conversation type
-    if type == 'public':
+    if not isPrivate:
         post_replies_ref = db.collection('postReplies').add({
             'postId': post_id,
             'conversationId': conversation_id,
@@ -262,6 +256,25 @@ async def post_reply(user_id, post_id, post_user_id, text, isPrivate):
     # Optionally update reply count in the post document
     await update_post_reply_count(post_id)
 
-    return message_doc[1].id
+    post_owner_details= await get_user_details(post_user_id)
+    user_details = await get_user_details(user_id)
 
+    # Send notification
+    send_reply_post_notification(
+        receiver_token=post_owner_details.get('fcm_token'),
+        reply_content=text,
+        isPrivate=isPrivate,
+        conversation_id=conversation_id,
+        post_id=post_id,
+        sender_id=user_id,
+        sender_display_name= user_details.get('display_name'),
+        sender_username= user_details.get('username'),
+        sender_profilePic=user_details.get('profilePic'),
+        receiver_id=post_user_id,
+        receiver_username=post_owner_details.get('username'),
+        receiver_display_name=post_owner_details.get('display_name'),  # assuming get_user_details fetches 'display_name'
+        receiver_profilePic=post_owner_details.get('profilePic'),  # assuming get_user_details fetches 'profilePic'
+
+    )
+    return message_doc[1].id
 

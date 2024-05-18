@@ -8,22 +8,12 @@ import auth from '@react-native-firebase/auth';
 import ExpandableFAB from '../components/fab';
 import {BackHandler} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import fetchUserDetails from '../services.jsx/fetchUser';
 
 const ProfileScreen = ({route, navigation}) => {
   const {userId, profilePic, displayName, username} = route.params;
   const [isFabOpen, setIsFabOpen] = useState(false);
-
-  const fetchUserDetails = async participantId => {
-    // Placeholder function to fetch user details from Firestore
-    const userDoc = await firestore()
-      .collection('users')
-      .doc(participantId)
-      .get();
-    if (userDoc.exists) {
-      return {userId: participantId, ...userDoc.data()}; // Include additional user details as needed
-    }
-    return null;
-  };
+  const [fetchedUserDetails, setFetchedUserDetails] = useState(null);
 
   const yourUserId = auth().currentUser ? auth().currentUser.uid : null;
   const navigateToChatScreen = params => {
@@ -103,17 +93,23 @@ const ProfileScreen = ({route, navigation}) => {
       userId,
       isPrivate,
     );
-
+    const details = await fetchUserDetails(yourUserId);
+    setFetchedUserDetails(details);
+    console.log(fetchedUserDetails);
     // Also uses navigateToChatScreen with a single argument object
     navigateToChatScreen({
-      userId: yourUserId,
-      otherUserId: userId,
-      profilePic,
-      displayName,
-      username,
-      isPrivate: isPrivate,
+      senderUserId: yourUserId,
+      receiverUserId: userId,
+      receiverProfilePic: profilePic,
+      receiverDisplayName: displayName,
+      receiverUsername: username,
+      index: 0,
+      isPrivate,
       conversationId,
       viewOnlyPublic,
+      senderDisplayName: fetchedUserDetails.display_name,
+      senderProfilePic: fetchedUserDetails.profilePic,
+      senderUsername: fetchedUserDetails.username,
     });
   };
 

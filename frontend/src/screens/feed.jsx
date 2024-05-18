@@ -15,6 +15,7 @@ import PostBubble from '../components/postbubble';
 import {FeedProvider, useFeedContext} from '../FeedContext';
 import CheckBox from '@react-native-community/checkbox'; // Import CheckBox
 import firestore from '@react-native-firebase/firestore';
+import {encryptMessage, decryptMessage} from '../services.jsx/encrypt';
 
 const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 
@@ -168,14 +169,16 @@ const Feed = ({navigation}) => {
 
     // Assuming you fetch or have post_userId available somehow
     const type = replyPrivately ? 'private' : 'public';
+    console.log(replyPrivately);
+    const encryptedText = await encryptMessage(text);
 
     try {
       const response = await axios.post(`${apiUrl}/post_reply`, {
         user_id: loggedinUserId,
         post_id: swipedPost.postId,
         post_user_id: swipedPost.post_userId,
-        text: text,
-        type: type,
+        text: replyPrivately ? encryptedText : text,
+        isPrivate: replyPrivately,
       });
 
       const responseData = await response.data;

@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import LoginPage from './src/screens/login';
-import FrameTabsScreen from './src/screens/frametabs';
 import auth from '@react-native-firebase/auth';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
@@ -16,24 +15,34 @@ import * as RNIap from 'react-native-iap';
 import 'react-native-get-random-values';
 import {useNavigation} from '@react-navigation/native';
 import PushNotification from 'react-native-push-notification';
+import StackNavigator from './src/screens/stacknavigator';
+import {AuthProvider, useAuth} from './authcontext';
+import fetchUserDetails from './src/services.jsx/fetchUser';
 
 enableScreens();
 const AppStack = createStackNavigator();
 
 function App() {
-  const [isSignedIn, setIsSignedIn] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [initializing, setInitializing] = useState(true);
+  const [fetchedUserDetails, setFetchedUserDetails] = useState(null);
+
+  const {isSignedIn, setIsSignedIn, isSignUpViaGoogle} = useAuth();
 
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
-      setIsSignedIn(!!user);
+      if (user) {
+        if (!isSignUpViaGoogle) {
+          setIsSignedIn(true);
+        } // No action is taken when isSignUpViaGoogle is true
+      } else {
+        setIsSignedIn(false); // Explicitly set isSignedIn to false when no user is logged in
+      }
       setInitializing(false);
     });
-    return unsubscribe;
-  }, []);
 
-  const Tab = createMaterialTopTabNavigator();
+    return unsubscribe;
+  }, [isSignUpViaGoogle]); // Removed setIsSignedIn from the dependency array
 
   useEffect(() => {
     const initMessaging = async () => {
@@ -62,6 +71,11 @@ function App() {
       try {
         await RNIap.initConnection();
         await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
+        const loggedInUserId = auth().currentUser
+          ? auth().currentUser.uid
+          : null;
+        const details = await fetchUserDetails(loggedInUserId);
+        setFetchedUserDetails(details);
       } catch (err) {
         console.error('IAP init error:', err);
       }
@@ -98,7 +112,24 @@ function App() {
 
       onNotification: function (notification) {
         // // Example of navigating to a specific screen
-        if (notification.data && notification.data.post_content) {
+        if (notification.data.reply_content) {
+          const isPrivate = notification.data.isPrivate === 'true';
+          console.log(notification.data);
+          navigation.navigate('ChatScreen', {
+            senderUserId: notification.data.receiver_id,
+            receiverUserId: notification.data.sender_id,
+            receiverDisplayName: notification.data.sender_display_name,
+            receiverUsername: notification.data.sender_username,
+            receiverProfilePic: notification.data.sender_profilePic,
+            isPrivate: isPrivate,
+            conversationId: notification.data.conversation_id,
+            index: 0,
+            viewOnlyPublic: false,
+            senderProfilePic: notification.data.receiver_profilePic,
+            senderDisplayName: notification.data.receiver_display_name,
+            senderUsername: notification.data.receiver_username,
+          });
+        } else if (notification.data && notification.data.post_content) {
           navigation.navigate('ProfileScreen', {
             userId: notification.data.user_id, // Assuming you have a user ID field
             displayName: notification.data.display_name,
@@ -131,8 +162,17 @@ function App() {
         .getInitialNotification()
         .then(remoteMessage => {
           if (remoteMessage) {
+            if (remoteMessage.data.reply_content) {
+              // Handling reply to post notification
+              navigation.navigate('ProfileScreen', {
+                userId: remoteMessage.data.user_id, // Assuming you have a user ID field
+                displayName: remoteMessage.data.display_name,
+                profilePic: remoteMessage.data.profilePic,
+                username: remoteMessage.data.username,
+              });
+            }
             // Determine if it's a like notification
-            if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
+            else if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
               navigation.navigate('ProfileScreen', {
                 userId: remoteMessage.data.user_id, // Assuming you have a user ID field
                 displayName: remoteMessage.data.display_name,
@@ -186,31 +226,34 @@ function App() {
   };
 
   return (
-    <GestureHandlerRootView style={{flex: 1}}>
-      <MenuProvider>
-        <NavigationContainer>
-          <NotificationHandler />
-          <AppStack.Navigator screenOptions={{headerShown: false}}>
-            {isSignedIn ? (
-              <>
-                <AppStack.Screen
-                  name="FrameTabsScreen"
-                  component={FrameTabsScreen}
-                />
-                <AppStack.Screen name="ChatScreen" component={ChatScreen} />
-                <AppStack.Screen
-                  name="ProfileScreen"
-                  component={ProfileScreen}
-                />
-              </>
-            ) : (
-              <AppStack.Screen name="Login" component={LoginPage} />
-            )}
-          </AppStack.Navigator>
-        </NavigationContainer>
-      </MenuProvider>
-    </GestureHandlerRootView>
+    <NavigationContainer>
+      <NotificationHandler />
+      <AppStack.Navigator screenOptions={{headerShown: false}}>
+        {isSignedIn ? (
+          <>
+            <AppStack.Screen
+              name="FrameTabsScreen"
+              component={StackNavigator}
+            />
+            <AppStack.Screen name="ChatScreen" component={ChatScreen} />
+            <AppStack.Screen name="ProfileScreen" component={ProfileScreen} />
+          </>
+        ) : (
+          <AppStack.Screen name="Login" component={LoginPage} />
+        )}
+      </AppStack.Navigator>
+    </NavigationContainer>
   );
 }
 
-export default App;
+const AppWrapper = () => (
+  <GestureHandlerRootView style={{flex: 1}}>
+    <AuthProvider>
+      <MenuProvider>
+        <App />
+      </MenuProvider>
+    </AuthProvider>
+  </GestureHandlerRootView>
+);
+
+export default AppWrapper;

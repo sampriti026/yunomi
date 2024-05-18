@@ -2,11 +2,11 @@ import React, {useState, useEffect} from 'react';
 import {StyleSheet, TouchableOpacity, View, Text} from 'react-native';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {BackHandler} from 'react-native';
-import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import MultiStepForm from '../components/Multistepform';
 import EmailPasswordLoginForm from '../components/emailpassword';
 import {updateFcmToken} from '../components/updatefcm';
+import {useAuth} from '../../authcontext';
 
 GoogleSignin.configure({
   webClientId:
@@ -17,13 +17,11 @@ GoogleSignin.configure({
 function LoginPage({navigation}) {
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [message, setMessage] = useState('');
-  const [googleId, setGoogleId] = useState(null);
-  const [firebaseUid, setFirebaseUid] = useState('');
-  const [isSignUpViaGoogle, setIsSignUpViaGoogle] = useState(false);
-  const [email, setEmail] = useState('');
   const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [googleData, setGoogleData] = useState();
 
   const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
+  const {signUpViaGoogle, setIsSignedIn} = useAuth();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -39,23 +37,30 @@ function LoginPage({navigation}) {
     try {
       await GoogleSignin.signOut(); // Sign out before signing in
       const {idToken, user} = await GoogleSignin.signIn();
+      const email = user.email;
+      const signInMethods = await auth().fetchSignInMethodsForEmail(email);
+
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
 
-      const userCredential = await auth().signInWithCredential(
-        googleCredential,
-      );
-      setFirebaseUid(userCredential.user.uid);
-
-      setEmail(userCredential.user.email); // Get the user's email address
-
-      const usersRef = firestore().collection('users');
-      const doc = await usersRef.doc(userCredential.user.uid).get();
-
-      if (doc.exists) {
+      if (signInMethods.length) {
+        const userCredential = await auth().signInWithCredential(
+          googleCredential,
+        );
+        setIsSignedIn(true);
         await updateFcmToken(userCredential.user.uid);
       } else {
+        signUpViaGoogle();
+        const userCredential = await auth().signInWithCredential(
+          googleCredential,
+        );
+
+        setGoogleData({
+          idToken: idToken,
+          googleId: user.id, // or user.uid based on the API
+          email: user.email,
+          firebase_uid: userCredential.user.uid,
+        });
         setIsFirstTimeUser(true);
-        setIsSignUpViaGoogle(true);
       }
     } catch (error) {
       console.error('Error in Google Sign In:', error);
@@ -64,7 +69,6 @@ function LoginPage({navigation}) {
 
   const onDirectSignUpPress = () => {
     setIsFirstTimeUser(true);
-    setIsSignUpViaGoogle(false); // Explicitly mark as not signing up via Google
   };
 
   useEffect(() => {
@@ -131,10 +135,7 @@ function LoginPage({navigation}) {
           apiUrl={apiUrl}
           setMessage={setMessage}
           navigation={navigation}
-          isSignUpViaGoogle={isSignUpViaGoogle}
-          googleId={googleId}
-          firebaseUid={firebaseUid}
-          email={email}
+          googleData={googleData}
         />
       )}
       {message && <Text style={styles.message}>{message}</Text>}
