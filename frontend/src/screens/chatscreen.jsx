@@ -21,6 +21,10 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import {useIsFocused} from '@react-navigation/native';
 import {BlurView} from '@react-native-community/blur';
 import axios from 'axios';
+import SubscriptionModal from '../components/subscriptionModel';
+import {purchaseErrorListener, purchaseUpdatedListener} from 'react-native-iap';
+import * as RNIap from 'react-native-iap';
+
 const ChatScreen = ({navigation, route}) => {
   const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
   const {
@@ -41,6 +45,72 @@ const ChatScreen = ({navigation, route}) => {
   const [messages, setMessages] = useState([]);
   const [postedMessageIds, setPostedMessageIds] = useState({}); // New state to track posted messages
   const [summary, setSummary] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [products, setProducts] = useState([]);
+
+  const skus = Platform.select({
+    android: [
+      'com.yunomi.subscription.monthly', // One-time purchase for one month access
+      'com.yunomi.subscription.annual', // Annual subscription
+    ],
+  });
+
+  useEffect(() => {
+    async function initIAP() {
+      try {
+        await RNIap.initConnection();
+        await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
+        const items = await RNIap.getSubscriptions({skus});
+        setProducts(items);
+      } catch (err) {}
+    }
+
+    initIAP();
+
+    const purchaseUpdateSub = purchaseUpdatedListener(async purchase => {
+      const receipt = purchase.transactionReceipt;
+      if (receipt) {
+        try {
+          // Validate the receipt with your server if necessary
+          await RNIap.finishTransaction(purchase);
+          Alert.alert(
+            'Purchase Successful',
+            'You have successfully subscribed to the premium plan.',
+          );
+        } catch (ackErr) {
+          console.warn('ackErr', ackErr);
+        }
+      }
+    });
+
+    const purchaseErrorSub = purchaseErrorListener(error => {
+      console.warn('purchaseErrorListener', error);
+    });
+
+    return () => {
+      purchaseUpdateSub.remove();
+      purchaseErrorSub.remove();
+      RNIap.endConnection(); // Don't forget to end the connection when you are done!
+    };
+  }, []);
+
+  const handleBuyPremium = async (productId, offerToken) => {
+    try {
+      const purchaseOptions = {
+        sku: productId,
+        ...(offerToken
+          ? {subscriptionOffers: [{sku: productId, offerToken}]}
+          : {}),
+      };
+
+      await RNIap.requestSubscription(purchaseOptions);
+
+      setModalVisible(false); // Close the modal upon initiating the purchase
+    } catch (err) {
+      console.warn('Purchase failed:', err);
+    }
+  };
+
   // Get the currently logged-in user's ID
   const loggedInUserId = auth().currentUser ? auth().currentUser.uid : null;
 
@@ -434,9 +504,21 @@ const ChatScreen = ({navigation, route}) => {
           <BlurView style={styles.absolute} blurType="light" blurAmount={1} />
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryText}>{summary}</Text>
-            <Text style={{color: 'grey'}}>Get premium to read their chat.</Text>
+            <TouchableOpacity onPress={() => setModalVisible(true)}>
+              <Text style={{color: 'grey'}}>
+                Get premium to read their chat.
+              </Text>
+            </TouchableOpacity>
           </View>
         </>
+      )}
+      {modalVisible && (
+        <SubscriptionModal
+          isVisible={modalVisible}
+          products={products}
+          onClose={() => setModalVisible(false)}
+          onSubscribe={handleBuyPremium}
+        />
       )}
       {isParticipant && <InputBox sendMessage={sendMessage} />}
     </View>

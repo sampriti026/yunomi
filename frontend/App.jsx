@@ -81,6 +81,21 @@ function App() {
     const navigation = useNavigation();
 
     PushNotification.configure({
+      onRegister: function (token) {
+        console.log('TOKEN:', token);
+      },
+      onNotification: function (notification) {
+        console.log('NOTIFICATION:', notification);
+        notification.finish(PushNotificationIOS.FetchResult.NoData);
+      },
+      permissions: {
+        alert: true,
+        badge: true,
+        sound: true,
+      },
+      popInitialNotification: true,
+      requestPermissions: Platform.OS === 'ios' ? true : false,
+
       onNotification: function (notification) {
         // // Example of navigating to a specific screen
         if (notification.data && notification.data.post_content) {

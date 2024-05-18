@@ -10,6 +10,7 @@ import ContactCard from '../components/contact';
 import {BackHandler, ToastAndroid} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import {TypingIndicator} from '../components/typingIndicator';
+import {formatDiagnostic} from 'typescript';
 
 const Nomi = ({navigation}) => {
   const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
@@ -90,13 +91,13 @@ const Nomi = ({navigation}) => {
     }
   };
 
-  const navigateChatscreen = async user => {
+  const navigateToProfile = async user => {
     const userDetails = await fetchUserDetails(user);
     if (userDetails) {
-      navigation.navigate('ProfileScreen', {
+      navigation.push('ProfileScreen', {
         userId: user,
         profilePic: userDetails.profilePic, // Adjust keys as per your API response
-        display_name: userDetails.display_name,
+        displayName: userDetails.display_name,
         username: userDetails.username,
       });
     } else {
@@ -175,6 +176,7 @@ const Nomi = ({navigation}) => {
         }
         return item;
       });
+      console.log(formattedMessages[0].timestamp);
 
       setMessages(formattedMessages); // Assuming setMessages is your state updater for messages
     } catch (error) {
@@ -198,10 +200,18 @@ const Nomi = ({navigation}) => {
         onContentSizeChange={() =>
           scrollViewRef.current.scrollToEnd({animated: true})
         }>
-        <LeftBubble text="looking for someone who would be interested in you?" />
-        <LeftBubble text="tell me something about yourself along with who you wanna connect in a single message, i will do some magic." />
-        <LeftBubble text="for eg - 'hey i am 21 year old gamer looking for people who live in europe and would love to play CoD with me'" />
-        <LeftBubble text="or maybe - 'I realised that i resort to fantasizing about hardwork without doing the work. anyone i can connect to someone who will help me with this?'" />
+        <LeftBubble
+          text="looking for someone who would be interested in you?"
+          timestamp={'2024-05-15T17:30:59.453533'}
+        />
+        <LeftBubble
+          text="tell me something about yourself along with who you wanna connect in a single message, i will do some magic."
+          timestamp={'2024-05-15T17:30:59.453533'}
+        />
+        <LeftBubble
+          text="for eg - 'hey i am 21 year old studying in college in Poland, looking for people who live in europe and are interested in writing and some cinematography.'"
+          timestamp={'2024-05-15T17:30:59.453533'}
+        />
 
         {messages.map((message, index) => {
           if (message.matched_user_id) {
@@ -215,9 +225,7 @@ const Nomi = ({navigation}) => {
                 <ContactCard
                   key={index}
                   displayName={message.display_name}
-                  onCardClick={() =>
-                    navigateChatscreen(message.matched_user_id)
-                  }
+                  onCardClick={() => navigateToProfile(message.matched_user_id)}
                   logoUri={message.profilePic}
                 />
               </React.Fragment>

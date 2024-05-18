@@ -8,47 +8,34 @@ import {useFeedContext} from '../FeedContext'; // Adjust the import path as nece
 import axios from 'axios';
 import {Animated} from 'react-native';
 
-const formatTimestamp = isoTimestamp => {
-  const postDate = new Date(isoTimestamp);
-  const now = new Date();
-  const diffMs = now - postDate; // milliseconds difference
-  const diffMins = Math.round(diffMs / 60000); // minutes difference
-  const diffHours = Math.round(diffMs / 3600000); // hours difference
-  const diffDays = Math.round(diffMs / 86400000); // days difference
+const formatTimestamp = timestamp => {
+  const date = new Date(
+    timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000,
+  );
 
-  if (diffMins < 60) {
-    return `${diffMins}m`;
-  } else if (diffHours < 24) {
-    return `${diffHours}h`;
+  // Get today's date for comparison
+  const today = new Date();
+  const todayString = today.toISOString().split('T')[0];
+  const dateString = date.toISOString().split('T')[0];
+
+  // Check if the date is from today
+  if (dateString === todayString) {
+    // Format time as AM/PM format
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    });
+  } else if (date.getFullYear() === today.getFullYear()) {
+    // Format as "Month day" if within the current year
+    return date.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
   } else {
-    // Format the date as "Feb 8"
-    const monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    const date = postDate.getDate();
-    const monthIndex = postDate.getMonth();
-    const year = postDate.getFullYear();
-    const currentYear = now.getFullYear();
-
-    // Use substring to get the last two digits of the year
-    const yearShortForm = year.toString().substring(2);
-
-    // If the post was made in a different year, include the year in the format.
-    if (year < currentYear) {
-      return `${monthNames[monthIndex]} ${date}, '${yearShortForm}`;
-    }
-    return `${monthNames[monthIndex]} ${date}`;
+    // Format as "Month day, year" if from another year
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 };
 
