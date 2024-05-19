@@ -26,7 +26,6 @@ const Feed = ({navigation}) => {
   const [replyPrivately, setReplyPrivately] = useState(false);
 
   const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
-  console.log(loggedinUserId);
 
   const fetchUserDetails = async userId => {
     // Placeholder function to fetch user details from Firestore
@@ -169,7 +168,6 @@ const Feed = ({navigation}) => {
 
     // Assuming you fetch or have post_userId available somehow
     const type = replyPrivately ? 'private' : 'public';
-    console.log(replyPrivately);
     const encryptedText = await encryptMessage(text);
 
     try {

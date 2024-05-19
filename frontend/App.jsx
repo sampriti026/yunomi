@@ -114,7 +114,6 @@ function App() {
         // // Example of navigating to a specific screen
         if (notification.data.reply_content) {
           const isPrivate = notification.data.isPrivate === 'true';
-          console.log(notification.data);
           navigation.navigate('ChatScreen', {
             senderUserId: notification.data.receiver_id,
             receiverUserId: notification.data.sender_id,

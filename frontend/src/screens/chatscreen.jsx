@@ -140,7 +140,6 @@ const ChatScreen = ({navigation, route}) => {
     let unsubscribeMessages;
 
     const fetchConversation = async () => {
-      console.log('fetchConversation', conversationId);
       if (viewOnlyPublic & (index > 0)) {
         const userDetails = await fetchUserDetails(loggedInUserId);
         if (!userDetails || !userDetails.premium) {
@@ -225,7 +224,6 @@ const ChatScreen = ({navigation, route}) => {
             });
 
             const fetchedMessages = await Promise.all(updates);
-            console.log(fetchedMessages);
             setMessages(
               fetchedMessages.sort((a, b) => b.timestamp - a.timestamp),
             );

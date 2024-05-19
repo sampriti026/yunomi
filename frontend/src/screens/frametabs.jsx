@@ -8,7 +8,6 @@ import 'react-native-gesture-handler';
 const Tab = createMaterialTopTabNavigator();
 
 export function FrameTabs() {
-  console.log('ghgh');
   return (
     <Tab.Navigator
       screenOptions={{
@@ -32,9 +31,7 @@ export function FrameTabs() {
         name="Nomi"
         component={Nomi}
         listeners={{
-          tabPress: e => {
-            console.log('tabPress', e); //Works
-          },
+          tabPress: e => {},
         }}
       />
       <Tab.Screen name="Feed" component={Feed} />

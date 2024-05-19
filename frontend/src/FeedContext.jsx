@@ -11,6 +11,5 @@ export const FeedProvider = ({children}) => {
     swipedPost,
     setSwipedPost, // Allow components to update the swiped post details
   };
-  console.log(swipedPost);
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;
 };

@@ -95,7 +95,6 @@ const ProfileScreen = ({route, navigation}) => {
     );
     const details = await fetchUserDetails(yourUserId);
     setFetchedUserDetails(details);
-    console.log(fetchedUserDetails);
     // Also uses navigateToChatScreen with a single argument object
     navigateToChatScreen({
       senderUserId: yourUserId,

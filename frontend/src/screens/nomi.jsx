@@ -176,7 +176,6 @@ const Nomi = ({navigation}) => {
         }
         return item;
       });
-      console.log(formattedMessages[0].timestamp);
 
       setMessages(formattedMessages); // Assuming setMessages is your state updater for messages
     } catch (error) {
