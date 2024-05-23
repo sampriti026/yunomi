@@ -196,34 +196,10 @@ async def get_conversation_id(user1: str, user2: str):
     return None
 
 
-async def send_message(request):
+async def send_notification(request):
     logging.info(f"Received message send request: {request}")
     
     try:
-        if request.conversation_id is None:
-            if request.is_private and not await check_weekly_limit(request.sender_id, request.receiver_id):
-                raise HTTPException(status_code=400, detail="Cannot start a new conversation due to restrictions.")
-            conversation_ref = db.collection('conversations').document()
-            conversation_ref.set({
-                'participants': [request.sender_id, request.receiver_id],
-                'is_private': request.is_private,
-                'last_message': request.text,
-                'last_updated': {
-                    request.sender_id: datetime.utcnow(),
-                    request.receiver_id: datetime.utcnow()  # Initially set both to the same time when conversation is created
-                },
-            })
-            conversation_id = conversation_ref.id
-            logging.info(f"New conversation created with ID: {conversation_id}")
-        else:
-            conversation_ref = db.collection('conversations').document(request.conversation_id)
-            conversation_ref.update({
-                f'last_updated.{request.sender_id}': datetime.utcnow(),
-                'last_message': request.text,
-            })
-            conversation_id = request.conversation_id
-            logging.info(f"Updated conversation {conversation_id}")
-
         # Get receiver details
         receiver_details = await get_user_details(request.receiver_id)
         sender_details = await get_user_details(request.sender_id)
@@ -236,7 +212,7 @@ async def send_message(request):
             send_fcm_notification(
                 receiver_token=receiver_token,
                 content=request.text, 
-                conversation_id=conversation_id,
+                conversation_id=request.conversation_id,
                 isPrivate=request.is_private,
                 sender_id=request.sender_id,               
                 sender_display_name=sender_details.get('display_name'),
@@ -250,17 +226,7 @@ async def send_message(request):
         else:
             logging.warning("Receiver details not found, notification not sent.")
 
-        # Save the message
-        conversation_messages_ref = db.collection('conversations').document(conversation_id).collection('messages')
-        conversation_messages_ref.add({
-            'user_id': request.sender_id,
-            'text': request.text,
-            'from_bot': False,
-            'timestamp': request.timestamp,
-        })
-        logging.info(f"Message added to conversation {conversation_id}")
-
-        return {"status": "success", "message": "Message sent successfully", "conversation_id": conversation_id}
+        return {"status": "success", "message": "Notification sent successfully", "conversation_id": request.conversation_id}
     except Exception as e:
         logging.error(f"Error processing send_message request: {e}")
         raise HTTPException(status_code=500, detail=str(e))

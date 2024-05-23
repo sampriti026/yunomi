@@ -15,7 +15,7 @@ import PostBubble from '../components/postbubble';
 import {FeedProvider, useFeedContext} from '../FeedContext';
 import CheckBox from '@react-native-community/checkbox'; // Import CheckBox
 import firestore from '@react-native-firebase/firestore';
-import {encryptMessage, decryptMessage} from '../services.jsx/encrypt';
+import {encryptMessage} from '../services.jsx/encrypt';
 
 const apiUrl = 'https://yunomibackendlinux.azurewebsites.net';
 

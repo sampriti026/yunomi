@@ -10,7 +10,6 @@ import ContactCard from '../components/contact';
 import {BackHandler, ToastAndroid} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
 import {TypingIndicator} from '../components/typingIndicator';
-import {formatDiagnostic} from 'typescript';
 
 const Nomi = ({navigation}) => {
   const loggedinUserId = auth().currentUser ? auth().currentUser.uid : null;
@@ -160,7 +159,6 @@ const Nomi = ({navigation}) => {
       const snapshot = await messagesQuery.get();
 
       const historicalMessages = snapshot.docs.map(doc => doc.data());
-
       // Check if there are messages
       if (historicalMessages.length === 0) {
         return; // Or handle this case as needed

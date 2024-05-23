@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from models import Message, Post, SendMessageRequest, ConversationRequest
-from services import chat_service, post_service, message_service, ai
+from services import chat_service, message_service, ai
 
 
 router = APIRouter()
@@ -28,10 +28,10 @@ async def receive_message(message: Message):
     return response
 
 
-@router.post("/send_message")
-async def send_message(request: SendMessageRequest):
-    print("send_message api is called")
-    result = await message_service.send_message(request)
+@router.post("/send_notification")
+async def handle_send_notification(request: SendMessageRequest):
+    print("send_notification api is called")
+    result = await message_service.send_notification(request)
     return result
 
 

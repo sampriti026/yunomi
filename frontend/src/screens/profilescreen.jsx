@@ -12,8 +12,6 @@ import fetchUserDetails from '../services.jsx/fetchUser';
 
 const ProfileScreen = ({route, navigation}) => {
   const {userId, profilePic, displayName, username} = route.params;
-  const [isFabOpen, setIsFabOpen] = useState(false);
-  const [fetchedUserDetails, setFetchedUserDetails] = useState(null);
 
   const yourUserId = auth().currentUser ? auth().currentUser.uid : null;
   const navigateToChatScreen = params => {
@@ -94,7 +92,6 @@ const ProfileScreen = ({route, navigation}) => {
       isPrivate,
     );
     const details = await fetchUserDetails(yourUserId);
-    setFetchedUserDetails(details);
     // Also uses navigateToChatScreen with a single argument object
     navigateToChatScreen({
       senderUserId: yourUserId,
@@ -106,9 +103,9 @@ const ProfileScreen = ({route, navigation}) => {
       isPrivate,
       conversationId,
       viewOnlyPublic,
-      senderDisplayName: fetchedUserDetails.display_name,
-      senderProfilePic: fetchedUserDetails.profilePic,
-      senderUsername: fetchedUserDetails.username,
+      senderDisplayName: details.display_name,
+      senderProfilePic: details.profilePic,
+      senderUsername: details.username,
     });
   };
 

@@ -4,7 +4,6 @@ import auth from '@react-native-firebase/auth';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {enableScreens} from 'react-native-screens';
-import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
 import ChatScreen from './src/screens/chatscreen';
 import ProfileScreen from './src/screens/profilescreen';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';

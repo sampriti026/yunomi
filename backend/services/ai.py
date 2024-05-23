@@ -24,7 +24,7 @@ async def update_summary(conversation_id, messages, conversations_ref):
     try:
         summary_response = await client.completions.create(
             model="gpt-3.5-turbo-instruct",
-            prompt=f"Based on this conversation between users, write a simple and concise summary of what they are talking about: {message_text}",
+            prompt=f"Based on this conversation between users, write a concise summary of what they are talking about in only two sentences. Make it interesting and funny.: {message_text}",
             max_tokens=150
         )
         summary = summary_response.choices[0].text.strip()

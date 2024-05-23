@@ -1,7 +1,15 @@
 import React, {useState} from 'react';
-import {View, StyleSheet, TouchableOpacity, Text} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Dimensions,
+} from 'react-native';
 import {FAB} from 'react-native-paper';
 import {BlurView} from '@react-native-community/blur';
+const windowWidth = Dimensions.get('window').width; // Get the window width
+const windowHeight = Dimensions.get('window').height; // Get the window height
 
 const ExpandableFAB = ({onSendMessage}) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -48,21 +56,19 @@ const ExpandableFAB = ({onSendMessage}) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    position: 'relative',
+    position: 'absolute', // Ensuring the FAB doesn't take more space
+    width: windowWidth, // Set width to window width
+    height: windowHeight, // Set height to window height
   },
   absolute: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: windowWidth, // Ensure the blur view covers the whole screen
+    height: windowHeight, // Ensure the blur view covers the whole screen
   },
   optionsContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 80,
+    bottom: 90, // Position it above the FAB
   },
   optionButton: {
     backgroundColor: '#fff',
@@ -78,7 +84,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     margin: 16,
     right: 0,
-    bottom: 0,
+    bottom: 50,
   },
 });
 

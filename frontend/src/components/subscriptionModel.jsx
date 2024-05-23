@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import {
   Modal,
   View,
@@ -19,8 +19,9 @@ const SubscriptionModal = ({isVisible, onClose, onSubscribe, products}) => {
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <ScrollView>
-            <Text style={styles.textStyle}>
-              Get unlimited private dms and read all chats.
+            <Text style={styles.textStyle}>Paid Features</Text>
+            <Text style={styles.subscriptionDetailText}>
+              Get unlimited private DMs. Read full chats of everyone.
             </Text>
             {products &&
               products.map((product, productIndex) => (
@@ -53,6 +54,14 @@ const SubscriptionModal = ({isVisible, onClose, onSubscribe, products}) => {
                   })}
                 </View>
               ))}
+            <Text style={styles.subscriptionDetailText}>
+              This app can be used without a subscription. With a subscription,
+              you get unlimited access to all paid features. Payment will be
+              charged to your Google Play account at the confirmation of
+              purchase. Subscriptions automatically renew unless canceled at
+              least 24 hours before the end of the current period. Manage or
+              cancel subscriptions in your Google Play account settings anytime.
+            </Text>
           </ScrollView>
           <TouchableOpacity style={styles.button} onPress={onClose}>
             <Text style={styles.textStyle}>Cancel</Text>
@@ -72,6 +81,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 22,
   },
+  subscriptionDetailText: {
+    color: 'black',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+
   modalView: {
     width: '80%', // Sets modal width to 80% of the screen width
     backgroundColor: 'white',

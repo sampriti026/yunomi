@@ -24,6 +24,10 @@ import axios from 'axios';
 import SubscriptionModal from '../components/subscriptionModel';
 import {purchaseErrorListener, purchaseUpdatedListener} from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
+import {
+  checkWeeklyLimitAndUpdate,
+  sendFirebaseMessage,
+} from '../components/sendFirebaseMessage';
 
 const ChatScreen = ({navigation, route}) => {
   const isFocused = useIsFocused(); // This hook returns true if the screen is focused, false otherwise.
@@ -245,45 +249,69 @@ const ChatScreen = ({navigation, route}) => {
   }, [isFocused, conversationId, viewOnlyPublic, index, loggedInUserId]);
 
   const sendMessage = async text => {
-    const tempMessageId = `temp-${Date.now()}`; // Unique ID for the optimistic message
-    const currentTimestamp = new Date().toISOString(); // Generate a single timestamp
-
-    const optimisticMessage = {
-      text,
-      user_id: loggedInUserId,
-      timestamp: currentTimestamp, // Use current date as the optimistic timestamp
-      key: tempMessageId,
-      status: 'sending', // Indicate that the message is in the process of being sent
-    };
-
-    // Update local state optimistically
-    setMessages(prevMessages => [optimisticMessage, ...prevMessages]);
-
-    const encryptedText = await encryptMessage(text);
     try {
-      const response = await axios.post(`${apiUrl}/send_message`, {
-        sender_id: loggedInUserId,
-        receiver_id: receiverUserId,
-        text: isPrivate ? encryptedText : text,
-        conversation_id: conversationId,
-        is_private: isPrivate,
-        timestamp: currentTimestamp,
-      });
+      if (isPrivate) {
+        const canSend = await checkWeeklyLimitAndUpdate(loggedInUserId);
+        if (!canSend) {
+          alert(
+            'You have reached your limit of 3 private messages per week. Please consider upgrading to premium to continue messaging privately.',
+          );
+          return; // Exit the function early if the limit is reached
+        }
+      }
 
-      const endTime = performance.now();
+      const tempMessageId = `temp-${Date.now()}`; // Unique ID for the optimistic message
+      const currentTimestamp = new Date().toISOString(); // Generate a single timestamp
+
+      const optimisticMessage = {
+        text,
+        user_id: loggedInUserId,
+        timestamp: currentTimestamp,
+        key: tempMessageId,
+        status: 'sending', // Indicate that the message is in the process of being sent
+      };
+
+      // Update local state optimistically
+      setMessages(prevMessages => [optimisticMessage, ...prevMessages]);
+
+      const encryptedText = await encryptMessage(text);
+      // Use the exported sendMessage function from your module
+      const conversation_id = await sendFirebaseMessage(
+        loggedInUserId,
+        receiverUserId,
+        isPrivate ? encryptedText : text,
+        isPrivate,
+      );
+
+      if (conversation_id) {
+        const notificationData = {
+          sender_id: loggedInUserId,
+          receiver_id: receiverUserId,
+          text: isPrivate ? encryptedText : text,
+          is_private: isPrivate,
+          conversation_id: conversation_id,
+        };
+        await axios.post(`${apiUrl}/send_notification`, notificationData);
+      }
+
+      // If successful, you might update the message status to 'sent' or handle it according to your app's logic
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.key === tempMessageId ? {...msg, status: 'sent'} : msg,
+        ),
+      );
     } catch (error) {
       console.error('Failed to send message:', error);
 
       // On error, update the optimistic message's status to 'failed'
       setMessages(prevMessages =>
         prevMessages.map(msg =>
-          msg.timestamp === currentTimestamp && msg.user_id === loggedInUserId
-            ? {...msg, status: 'failed'}
-            : msg,
+          msg.key === tempMessageId ? {...msg, status: 'failed'} : msg,
         ),
       );
     }
   };
+
   useEffect(() => {
     // Set active chat ID when the screen is focused
     const focusListener = navigation.addListener('focus', () => {

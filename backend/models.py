@@ -41,7 +41,7 @@ class SendMessageRequest(BaseModel):
     text: str
     is_private: bool  # Add this line
     conversation_id: Optional[str] = None
-    timestamp: datetime
+    
 
 
 class UserDetail(BaseModel):

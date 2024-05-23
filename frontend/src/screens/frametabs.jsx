@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import Nomi from './nomi';
 import Chats from './chats';
 import Feed from './feed';
