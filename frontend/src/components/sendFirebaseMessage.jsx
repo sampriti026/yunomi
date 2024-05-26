@@ -1,17 +1,30 @@
 import firestore from '@react-native-firebase/firestore';
 
-export const checkWeeklyLimitAndUpdate = async (userId, isProfileLiked) => {
+export const checkWeeklyLimitAndUpdate = async (
+  userId,
+  receiverUserId,
+  isProfileLiked,
+) => {
   const userRef = firestore().collection('users').doc(userId);
   const userDoc = await userRef.get();
-  if (isProfileLiked) {
+  const userData = userDoc.data();
+  const receiverUserRef = firestore().collection('users').doc(receiverUserId);
+  const receiverUserDoc = await receiverUserRef.get();
+  const receiverUserData = receiverUserDoc.data();
+
+  if (receiverUserData.user_likes.includes(userId)) {
+    // Add your logic here for when the userId is found in receiverUserId's user_likes array
     return true;
   }
+
   if (!userDoc.exists) {
     console.error('User not found');
     return false; // User not found, handle appropriately
   }
+  if (userData.premium) {
+    return true;
+  }
 
-  const userData = userDoc.data();
   const currentTimestamp = firestore.Timestamp.now();
   const lastReset = userData.last_message_reset?.toDate();
   const oneWeekAgo = new Date(
@@ -24,12 +37,14 @@ export const checkWeeklyLimitAndUpdate = async (userId, isProfileLiked) => {
       last_message_reset: currentTimestamp,
       message_count: 1,
     });
+
     return true;
   } else if (userData.message_count < 3) {
     // Increment the message count and allow the message
     await userRef.update({
       message_count: firestore.FieldValue.increment(1),
     });
+
     return true;
   }
 
@@ -99,7 +114,7 @@ export const sendFirebaseMessage = async (
         },
       });
     }
-
+    console.log(conversationId);
     // Add message to the conversation's message collection
     await conversationsRef.doc(conversationId).collection('messages').add({
       user_id: senderId,

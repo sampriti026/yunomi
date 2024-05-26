@@ -254,6 +254,7 @@ const ChatScreen = ({navigation, route}) => {
       if (isPrivate && (!conversationId || conversationId === '')) {
         const canSend = await checkWeeklyLimitAndUpdate(
           loggedInUserId,
+          receiverUserId,
           isProfileLiked,
         );
         if (!canSend) {
