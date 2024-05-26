@@ -2,10 +2,10 @@ from fastapi import APIRouter
 from models import Post
 from services import post_service
 from pydantic import BaseModel, Field
-from typing import List
 import logging
 from fastapi import APIRouter, HTTPException, status, Body
 from fastapi.responses import JSONResponse
+from typing import List, Optional
 
 
 router = APIRouter()
@@ -27,7 +27,8 @@ class PostReplyRequest(BaseModel):
     post_id: str
     post_user_id: str
     text: str
-    isPrivate: bool  # Consider validating this as an enum if there are only specific types allowed
+    isPrivate: bool
+    conversation_id: Optional[str] = None  # Consider validating this as an enum if there are only specific types allowed
 
 
 
@@ -58,7 +59,8 @@ async def post_reply(request: PostReplyRequest):
             post_id=request.post_id,
             post_user_id=request.post_user_id,
             text=request.text,
-            isPrivate=request.isPrivate
+            isPrivate=request.isPrivate,
+            conversation_id=request.conversation_id
         )
         return {"reply_id": reply_id, "message": "Reply posted successfully."}
     except Exception as e:

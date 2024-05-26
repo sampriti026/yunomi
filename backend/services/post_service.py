@@ -182,8 +182,7 @@ async def fetch_posts():
         print(f"Error fetching posts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def find_and_update_conversation(user_id, post_user_id, isPrivate, text):
-    conversation_id = await find_conversation_with_type(user_id, post_user_id, isPrivate)
+async def update_conversation(user_id, post_user_id, isPrivate, text, conversation_id):
     
     if isPrivate:
         if conversation_id is None:
@@ -204,7 +203,6 @@ async def find_and_update_conversation(user_id, post_user_id, isPrivate, text):
         conversation_ref = db.collection('conversations').document()
         conversation_ref.set({
             'participants': [user_id, post_user_id],
-            'last_updated': datetime.utcnow(),
             'is_private': isPrivate,
             'last_updated': {
                     user_id: datetime.utcnow(),
@@ -227,10 +225,19 @@ async def update_post_reply_count(post_id):
     post_ref.update({'reply_count': Increment(1)})
 
 
-async def post_reply(user_id, post_id, post_user_id, text, isPrivate):
+async def post_reply(user_id, post_id, post_user_id, text, isPrivate, conversation_id):
     # Encrypt text if the conversation is private
 
-    conversation_id = await find_and_update_conversation(user_id, post_user_id, isPrivate, text)
+    result = await update_conversation(user_id, post_user_id, isPrivate, text, conversation_id)
+
+    # Check if the result is an error message
+    if isinstance(result, dict) and 'status' in result and result['status'] == 'error':
+        # If there is an error, return it directly
+        return result
+    
+    if isinstance(result, str):
+        conversation_id = result  # Updating conversation_id if a new one was created
+
     
     # Add the encrypted or plain text to the conversation's messages
     conversation_messages_ref =  db.collection('conversations').document(conversation_id).collection('messages')

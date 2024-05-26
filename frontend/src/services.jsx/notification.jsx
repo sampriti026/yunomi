@@ -15,6 +15,10 @@ const setupForegroundMessageHandler = navigation => {
       // Handling reply to post notification
 
       const isPrivate = notificationData.isPrivate === 'true';
+      if (isPrivate) {
+        notificationData.reply_content =
+          'Someone replied privately on your post';
+      }
       await showNotification(
         navigation,
         isPrivate,
@@ -30,6 +34,15 @@ const setupForegroundMessageHandler = navigation => {
         false,
         notificationData.display_name + ' liked your post',
         notificationData.post_content, // Assuming likes aren't private, adjust as necessary
+        remoteMessage.data,
+      );
+    } else if (notificationData.user_id && !notificationData.post_id) {
+      // Assuming profile likes don't include a post_id
+      await showNotification(
+        navigation,
+        false, // Profile likes are not private
+        'Profile Like', // Title of the notification
+        `${notificationData.display_name} liked your profile!`, // Message body
         remoteMessage.data,
       );
     } else {
@@ -76,6 +89,14 @@ const setupForegroundMessageHandler = navigation => {
           senderUsername: receiver_username,
         });
       } else if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
+        navigation.navigate('ProfileScreen', {
+          userId: remoteMessage.data.user_id, // Assuming you have a user ID field
+          displayName: remoteMessage.data.display_name,
+          profilePic: remoteMessage.data.profilePic,
+          username: remoteMessage.data.username,
+        });
+      } else if (remoteMessage.data.user_id && !remoteMessage.data.post_id) {
+        // Assuming profile likes don't include a post_id
         navigation.navigate('ProfileScreen', {
           userId: remoteMessage.data.user_id, // Assuming you have a user ID field
           displayName: remoteMessage.data.display_name,

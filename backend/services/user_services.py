@@ -4,6 +4,10 @@ from dependencies import db
 from fastapi.responses import JSONResponse
 from typing import Optional
 from datetime import datetime
+import logging
+from services.notif_service import send_like_profile_notification
+
+logging.basicConfig(level=logging.INFO)
 
 
 
@@ -83,5 +87,32 @@ async def get_user_details(user_id: str) -> dict:
     else:
         print(f"No user found for user_id: {user_id}")  # Debugging log
     return {}
+
+
+async def handle_profile_like_notif(sender_id, receiver_id):
+    try:
+        # Get receiver details
+        receiver_details = await get_user_details(receiver_id)
+        sender_details = await get_user_details(sender_id)
+
+        if receiver_details:
+            receiver_token = receiver_details.get('fcm_token')
+            logging.info(f"Receiver token retrieved: {receiver_token}")
+            
+            # If receiver details are found, send a FCM notification
+            send_like_profile_notification(
+                receiver_token=receiver_token,
+                user_id=sender_id,
+                username=sender_details.get('username'),
+                display_name=sender_details.get('display_name'),
+                profilePic=sender_details.get('profilePic')
+            )
+        else:
+            logging.warning("Receiver details not found, notification not sent.")
+
+        return {"status": "success", "message": "Notification for profile like sent"}
+    except Exception as e:
+        logging.error(f"Error processing send_message request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 

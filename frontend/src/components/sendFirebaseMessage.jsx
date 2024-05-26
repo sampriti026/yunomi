@@ -1,9 +1,11 @@
 import firestore from '@react-native-firebase/firestore';
 
-export const checkWeeklyLimitAndUpdate = async userId => {
+export const checkWeeklyLimitAndUpdate = async (userId, isProfileLiked) => {
   const userRef = firestore().collection('users').doc(userId);
   const userDoc = await userRef.get();
-
+  if (isProfileLiked) {
+    return true;
+  }
   if (!userDoc.exists) {
     console.error('User not found');
     return false; // User not found, handle appropriately
@@ -34,6 +36,35 @@ export const checkWeeklyLimitAndUpdate = async userId => {
   return false; // Weekly limit exceeded
 };
 
+export const findConversationId = async (userId, otherUserId, isPrivate) => {
+  try {
+    // Query conversations that include the current user and match the privacy setting
+    const querySnapshot = await firestore()
+      .collection('conversations')
+      .where('participants', 'array-contains', userId)
+      .where('is_private', '==', isPrivate)
+      .get();
+
+    // Filter the conversations further to find one that includes both the specified participants only
+    const matchingConversation = querySnapshot.docs.find(doc => {
+      const data = doc.data();
+      const {participants} = data;
+      // Check if the participants array includes both userId and otherUserId and no others
+      return participants.includes(otherUserId) && participants.length === 2;
+    });
+
+    // If a matching conversation is found, return its ID
+    if (matchingConversation) {
+      return matchingConversation.id;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('Error finding conversation: ', error);
+    return null;
+  }
+};
+
 export const sendFirebaseMessage = async (
   senderId,
   receiverId,
@@ -44,18 +75,10 @@ export const sendFirebaseMessage = async (
     const conversationsRef = firestore().collection('conversations');
     let conversationId = '';
 
-    // Check for existing conversation or create a new one
-    const querySnapshot = await conversationsRef
-      .where('participants', 'array-contains', senderId)
-      .where('participants', 'array-contains', receiverId)
-      .where('is_private', '==', isPrivate)
-      .limit(1)
-      .get();
+    conversationId = await findConversationId(senderId, receiverId, isPrivate);
 
-    if (!querySnapshot.empty) {
-      // Conversation exists
-      conversationId = querySnapshot.docs[0].id;
-    } else {
+    // Check for existing conversation or create a new one
+    if (!conversationId) {
       // Create new conversation
       const newConversationRef = await conversationsRef.add({
         participants: [senderId, receiverId],
@@ -67,6 +90,14 @@ export const sendFirebaseMessage = async (
         },
       });
       conversationId = newConversationRef.id;
+    } else {
+      await conversationsRef.doc(conversationId).update({
+        last_message: text,
+        last_updated: {
+          [senderId]: firestore.Timestamp.now(),
+          [receiverId]: firestore.Timestamp.now(),
+        },
+      });
     }
 
     // Add message to the conversation's message collection
@@ -75,15 +106,6 @@ export const sendFirebaseMessage = async (
       text: text,
       from_bot: false,
       timestamp: firestore.Timestamp.now(),
-    });
-
-    // Optionally update the conversation with last message details
-    await conversationsRef.doc(conversationId).update({
-      last_message: text,
-      last_updated: {
-        [senderId]: firestore.Timestamp.now(),
-        [receiverId]: firestore.Timestamp.now(),
-      },
     });
 
     console.log('Message sent successfully to conversation:', conversationId);

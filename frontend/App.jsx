@@ -112,6 +112,8 @@ function App() {
       onNotification: function (notification) {
         // // Example of navigating to a specific screen
         if (notification.data.reply_content) {
+          console.log('1');
+
           const isPrivate = notification.data.isPrivate === 'true';
           navigation.navigate('ChatScreen', {
             senderUserId: notification.data.receiver_id,
@@ -128,6 +130,18 @@ function App() {
             senderUsername: notification.data.receiver_username,
           });
         } else if (notification.data && notification.data.post_content) {
+          console.log('2');
+
+          navigation.navigate('ProfileScreen', {
+            userId: notification.data.user_id, // Assuming you have a user ID field
+            displayName: notification.data.display_name,
+            profilePic: notification.data.profilePic,
+            username: notification.data.username,
+          });
+        } else if (notification.data.user_id && !notification.data.post_id) {
+          console.log('3');
+
+          // Assuming profile likes don't include a post_id
           navigation.navigate('ProfileScreen', {
             userId: notification.data.user_id, // Assuming you have a user ID field
             displayName: notification.data.display_name,
@@ -135,6 +149,8 @@ function App() {
             username: notification.data.username,
           });
         } else {
+          console.log('4');
+
           const isPrivate = notification.data.isPrivate === 'true';
 
           navigation.navigate('ChatScreen', {
@@ -170,7 +186,20 @@ function App() {
               });
             }
             // Determine if it's a like notification
-            else if (remoteMessage.data.post_id && remoteMessage.data.user_id) {
+            else if (
+              !remoteMessage.data.post_id &&
+              remoteMessage.data.user_id
+            ) {
+              navigation.navigate('ProfileScreen', {
+                userId: remoteMessage.data.user_id, // Assuming you have a user ID field
+                displayName: remoteMessage.data.display_name,
+                profilePic: remoteMessage.data.profilePic,
+                username: remoteMessage.data.username,
+              });
+            } else if (
+              remoteMessage.data.post_id &&
+              remoteMessage.data.user_id
+            ) {
               navigation.navigate('ProfileScreen', {
                 userId: remoteMessage.data.user_id, // Assuming you have a user ID field
                 displayName: remoteMessage.data.display_name,

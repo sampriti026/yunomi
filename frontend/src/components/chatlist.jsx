@@ -78,62 +78,72 @@ const ChatsList = ({onChatSelect, userId, viewOnlyPublic}) => {
 
   return (
     <View>
-      {chats.map((chat, index) => {
-        const otherUser = chat.participants.find(p => p.userId !== userId);
-        const isPrivate = chat.is_private;
-        chatLastMessage = chat.last_message;
+      {chats && chats.length > 0 ? (
+        chats.map((chat, index) => {
+          const otherUser = chat.participants.find(p => p.userId !== userId);
+          const isPrivate = chat.is_private;
+          chatLastMessage = chat.last_message;
 
-        return (
-          <TouchableOpacity
-            key={chat.conversation_id}
-            onPress={() =>
-              onChatSelect(
-                otherUser.userId,
-                otherUser.display_name,
-                otherUser.username,
-                otherUser.profilePic,
-                isPrivate,
-                chat.conversation_id,
-                index,
-              )
-            }>
-            <View style={styles.chatItem}>
-              {/* Assuming you have a profile image URL in your user details */}
-              <Image
-                source={{
-                  uri:
-                    otherUser.profilePic || 'https://via.placeholder.com/150',
-                }}
-                style={styles.dp}
-              />
-              <View style={styles.chatTextContainer}>
-                <Text style={styles.chatNameContainer}>
-                  <Text style={styles.chatName}>{otherUser.display_name}</Text>
-                  <Text style={styles.chatUsername}>
-                    {' '}
-                    @{otherUser.username}
+          return (
+            <TouchableOpacity
+              key={chat.conversation_id}
+              onPress={() =>
+                onChatSelect(
+                  otherUser.userId,
+                  otherUser.display_name,
+                  otherUser.username,
+                  otherUser.profilePic,
+                  isPrivate,
+                  chat.conversation_id,
+                  index,
+                )
+              }>
+              <View style={styles.chatItem}>
+                {/* Assuming you have a profile image URL in your user details */}
+                <Image
+                  source={{
+                    uri:
+                      otherUser.profilePic || 'https://via.placeholder.com/150',
+                  }}
+                  style={styles.dp}
+                />
+                <View style={styles.chatTextContainer}>
+                  <Text style={styles.chatNameContainer}>
+                    <Text style={styles.chatName}>
+                      {otherUser.display_name}
+                    </Text>
+                    <Text style={styles.chatUsername}>
+                      {' '}
+                      @{otherUser.username}
+                    </Text>
                   </Text>
-                </Text>
-                <Text
-                  style={[
-                    styles.chatLastMessage,
-                    chat.unread ? {fontWeight: 'bold'} : {},
-                  ]}>
-                  {chatLastMessage}
-                </Text>
-                {chat.is_private && (
-                  <Icon
-                    name="lock"
-                    size={40}
-                    color="#FFFFFF"
-                    style={styles.lockIcon}
-                  />
-                )}
+                  <Text
+                    style={[
+                      styles.chatLastMessage,
+                      chat.unread ? {fontWeight: 'bold'} : {},
+                    ]}>
+                    {chatLastMessage}
+                  </Text>
+                  {chat.is_private && (
+                    <Icon
+                      name="lock"
+                      size={40}
+                      color="#FFFFFF"
+                      style={styles.lockIcon}
+                    />
+                  )}
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+            </TouchableOpacity>
+          );
+        })
+      ) : (
+        <Text style={[styles.chatNameContainer, {left: 50}]}>
+          {viewOnlyPublic
+            ? "Seems like they haven't texted anyone yet."
+            : 'Make the first move to see something here!'}
+        </Text>
+      )}
     </View>
   );
 };

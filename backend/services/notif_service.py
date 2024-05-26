@@ -40,7 +40,7 @@ def send_like_notification(receiver_token: str, post_id: str, user_id: str, user
 
         message = messaging.Message(
             notification=messaging.Notification(
-            title='New Like',
+            title='New like on post',
             body=f'{post_content}',
         ),
         data={
@@ -64,8 +64,8 @@ def send_reply_post_notification(receiver_token: str, post_id: str, sender_id: s
         if len(reply_content) > 240:
             reply_content = reply_content[:240] + '...'
         
-        body_content = f"Someone replied you privately on your post: {reply_content}." if isPrivate else reply_content
-        title_content = "New reply" if isPrivate else f'New Reply from {sender_display_name}'
+        body_content = f"Someone replied you privately on your post." if isPrivate else reply_content
+        title_content = f'New Reply from {sender_display_name}'
 
         
         message = messaging.Message(
@@ -88,6 +88,28 @@ def send_reply_post_notification(receiver_token: str, post_id: str, sender_id: s
             "conversation_id": conversation_id
             },
             token=receiver_token
+        )
+        response = messaging.send(message)
+        print('Successfully sent notification:', response)
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+
+
+def send_like_profile_notification(receiver_token: str, user_id: str, username: str, display_name: str, profilePic: str,):
+    try:
+        
+        message = messaging.Message(
+            notification=messaging.Notification(
+            title='Someone liked your profile',
+            body=f'{display_name} liked you!',
+        ),
+        data={
+            "user_id": user_id,
+            "username": username,
+            "display_name": display_name,
+            "profilePic": profilePic,      
+            },
+        token=receiver_token
         )
         response = messaging.send(message)
         print('Successfully sent notification:', response)

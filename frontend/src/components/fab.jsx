@@ -68,13 +68,13 @@ const styles = StyleSheet.create({
   optionsContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 90, // Position it above the FAB
+    bottom: 110, // Position it above the FAB
   },
   optionButton: {
     backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    marginBottom: 10,
+    marginBottom: 20,
     borderRadius: 20,
   },
   optionText: {

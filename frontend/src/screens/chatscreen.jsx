@@ -44,6 +44,7 @@ const ChatScreen = ({navigation, route}) => {
     senderProfilePic,
     senderDisplayName,
     senderUsername,
+    isProfileLiked,
   } = route.params;
 
   const [messages, setMessages] = useState([]);
@@ -250,8 +251,11 @@ const ChatScreen = ({navigation, route}) => {
 
   const sendMessage = async text => {
     try {
-      if (isPrivate) {
-        const canSend = await checkWeeklyLimitAndUpdate(loggedInUserId);
+      if (isPrivate && (!conversationId || conversationId === '')) {
+        const canSend = await checkWeeklyLimitAndUpdate(
+          loggedInUserId,
+          isProfileLiked,
+        );
         if (!canSend) {
           alert(
             'You have reached your limit of 3 private messages per week. Please consider upgrading to premium to continue messaging privately.',
@@ -289,8 +293,9 @@ const ChatScreen = ({navigation, route}) => {
           receiver_id: receiverUserId,
           text: isPrivate ? encryptedText : text,
           is_private: isPrivate,
-          conversation_id: conversation_id,
+          conversation_id: conversation_id.conversationId,
         };
+        console.log(notificationData);
         await axios.post(`${apiUrl}/send_notification`, notificationData);
       }
 
@@ -301,6 +306,8 @@ const ChatScreen = ({navigation, route}) => {
         ),
       );
     } catch (error) {
+      const tempMessageId = `temp-${Date.now()}`; // Unique ID for the optimistic message
+
       console.error('Failed to send message:', error);
 
       // On error, update the optimistic message's status to 'failed'
@@ -346,7 +353,9 @@ const ChatScreen = ({navigation, route}) => {
           }
         }
       };
-      updateLastRead();
+      if (!viewOnlyPublic) {
+        updateLastRead();
+      }
     });
 
     // Remove active chat ID when the screen is blurred (navigated away from)
@@ -647,7 +656,7 @@ const styles = StyleSheet.create({
   summaryText: {
     color: 'black',
     fontSize: 14, // Smaller font size for the summary
-    textAlign: 'justified',
+    textAlign: 'justify',
   },
   overlayInfoContainer: {
     position: 'absolute', // Position over your flatlist

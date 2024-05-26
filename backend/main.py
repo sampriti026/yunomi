@@ -18,7 +18,6 @@ app.include_router(user_router.router)
 
 app.include_router(post_router.router)
 
-app.include_router(notif_router.router)
 
 scheduler = AsyncIOScheduler(timezone="UTC")
 

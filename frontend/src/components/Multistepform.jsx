@@ -168,11 +168,11 @@ const MultiStepForm = ({setMessage, navigation, apiUrl, googleData}) => {
         // Create user document in backend with Firebase UID
 
         await axios.post(`${apiUrl}/create_user/`, userData);
-        await updateFcmToken(firebaseUID, apiUrl);
+        await updateFcmToken(firebaseUID);
       } else {
         const response = await axios.post(`${apiUrl}/create_user/`, formData);
         if (response.status === 200) {
-          await updateFcmToken(formData.firebaseUid, apiUrl);
+          await updateFcmToken(formData.firebase_uid);
           setIsSignedIn(true); // Set signed in true after API success
         }
       }

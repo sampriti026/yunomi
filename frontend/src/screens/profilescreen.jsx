@@ -12,11 +12,23 @@ import fetchUserDetails from '../services.jsx/fetchUser';
 
 const ProfileScreen = ({route, navigation}) => {
   const {userId, profilePic, displayName, username} = route.params;
+  const [isProfileLiked, setIsProfileLiked] = useState();
+  const [details, setDetails] = useState({});
 
   const yourUserId = auth().currentUser ? auth().currentUser.uid : null;
   const navigateToChatScreen = params => {
     navigation.push('ChatScreen', params);
   };
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      console.log('gjhjhghgj');
+      const fetchedDetails = await fetchUserDetails(userId);
+      setIsProfileLiked(fetchedDetails.user_likes.includes(yourUserId));
+    };
+    fetchDetails();
+  }, []);
+
   const findConversationId = async (userId, otherUserId, isPrivate) => {
     try {
       // Query conversations that include the current user and match the privacy setting
@@ -68,6 +80,7 @@ const ProfileScreen = ({route, navigation}) => {
       senderProfilePic: profilePic,
       senderDisplayName: displayName,
       senderUsername: username,
+      isProfileLiked,
     });
   };
 
@@ -81,7 +94,12 @@ const ProfileScreen = ({route, navigation}) => {
       'hardwareBackPress',
       backAction,
     );
-
+    const fetchDetails = async () => {
+      console.log('gjhjhghgj');
+      const fetchedDetails = await fetchUserDetails(yourUserId);
+      setDetails(fetchedDetails);
+    };
+    fetchDetails();
     return () => backHandler.remove();
   }, [navigation]);
 
@@ -91,7 +109,7 @@ const ProfileScreen = ({route, navigation}) => {
       userId,
       isPrivate,
     );
-    const details = await fetchUserDetails(yourUserId);
+
     // Also uses navigateToChatScreen with a single argument object
     navigateToChatScreen({
       senderUserId: yourUserId,
@@ -106,6 +124,7 @@ const ProfileScreen = ({route, navigation}) => {
       senderDisplayName: details.display_name,
       senderProfilePic: details.profilePic,
       senderUsername: details.username,
+      isProfileLiked,
     });
   };
 
@@ -114,9 +133,12 @@ const ProfileScreen = ({route, navigation}) => {
       <ScrollView style={styles.container}>
         <ProfileDetails
           userId={userId}
-          profilePic={profilePic}
+          yourUserId={yourUserId}
+          profileImage={profilePic}
           displayName={displayName}
           username={username}
+          isProfileLiked={isProfileLiked}
+          setIsProfileLiked={setIsProfileLiked}
         />
         <ChatsList
           key="profile-chatslist"

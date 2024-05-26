@@ -105,11 +105,11 @@ async def find_conversation_with_type(participant1, participant2, is_private):
     """
     conversations_ref = db.collection('conversations')
     query = conversations_ref \
-        .where(field_path='participants', op_string='array_contains', value=participant1) \
-        .where(field_path='is_private', op_string='==', value=is_private)
-    
+        .where('participants', 'array_contains', participant1) \
+        .where('is_private', '==', is_private)
+
     try:
-        conversations = query.get()  # This should be awaited, and it returns an awaitable object
+        conversations = await query.get()  # Added await here
         for conversation in conversations:
             conversation_data = conversation.to_dict()
             participants = conversation_data.get('participants', [])
@@ -119,9 +119,8 @@ async def find_conversation_with_type(participant1, participant2, is_private):
     except Exception as e:
         print(f"Error retrieving or processing conversations: {e}")
         return None
-    print(conversation.id)
-
     return None
+
 
 
 

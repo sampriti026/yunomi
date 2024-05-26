@@ -41,7 +41,11 @@ class SendMessageRequest(BaseModel):
     text: str
     is_private: bool  # Add this line
     conversation_id: Optional[str] = None
-    
+
+class UserLikeRequest(BaseModel):
+    sender_id: str
+    receiver_id: str
+
 
 
 class UserDetail(BaseModel):

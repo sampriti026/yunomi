@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services import  user_services
+from services import  user_services, notif_service
 from pydantic import BaseModel
 from typing import Optional
 from fastapi import HTTPException
@@ -44,3 +44,8 @@ async def update_fcm_token(firebase_uid: str, request: FcmTokenUpdateRequest):
         raise HTTPException(status_code=404, detail="User not found.")
 
 
+@router.post("/send_profile_notification")
+async def handle_profile_notification(sender_id: str, receiver_id: str):
+    print("send_notification api is called")
+    result = await user_services.handle_profile_like_notif(sender_id, receiver_id )
+    return result
