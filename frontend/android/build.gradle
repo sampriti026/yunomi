@@ -3,22 +3,28 @@
 buildscript {
     ext {
         buildToolsVersion = "33.0.0"
-        minSdkVersion = 21
-        compileSdkVersion = 33
-        targetSdkVersion = 33
+        minSdkVersion = 24
+        compileSdkVersion = 34
+        targetSdkVersion = 34
         googlePlayServicesAuthVersion = "20.7.0" 
         supportLibVersion = "28.0.0"
 
         // We use NDK 23 which has both M1 support and is the side-by-side NDK version from AGP.
         ndkVersion = "23.1.7779620"
+        kotlin_version = '1.8.0'
+
     }
     repositories {
         google()
         mavenCentral()
     }
+
+
     dependencies {
-        classpath("com.android.tools.build:gradle")
+classpath ("com.android.tools.build:gradle:8.4.0")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath 'com.google.gms:google-services:4.4.0'
+        classpath ('com.google.gms:google-services:4.4.0')
+                classpath ("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
+
     }
 }

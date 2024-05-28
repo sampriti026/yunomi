@@ -83,8 +83,15 @@ android {
         versionCode 9
         versionName "1.0.8"
         missingDimensionStrategy "store", "play"
-
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+        buildFeatures {
+        buildConfig = true  // Enable BuildConfig feature
+    }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -123,14 +130,17 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
 }
 
 dependencies {
+
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation platform('com.google.firebase:firebase-bom:32.2.2')
     implementation project(':react-native-screens')
     implementation project(':react-native-gesture-handler')
+
 
     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")
     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {

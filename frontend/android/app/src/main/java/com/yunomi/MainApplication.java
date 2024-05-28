@@ -12,7 +12,7 @@ import java.util.List;
 import com.swmansion.gesturehandler.RNGestureHandlerPackage;
 import com.swmansion.rnscreens.RNScreensPackage;
 import com.reactnativecommunity.blurview.BlurViewPackage;
-
+import io.invertase.firebase.storage.ReactNativeFirebaseStoragePackage;
 
 
 public class MainApplication extends Application implements ReactApplication {
@@ -28,11 +28,14 @@ public class MainApplication extends Application implements ReactApplication {
         protected List<ReactPackage> getPackages() {
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // packages.add(new MyReactNativePackage());
-    packages.add(new RNScreensPackage());
-    packages.add(new com.swmansion.rnscreens.RNScreensPackage());
-    packages.add(new BlurViewPackage());
+    //       packages.add(new ReactNativeFirebaseStoragePackage());
+    //       // Packages that cannot be autolinked yet can be added manually here, for example:
+    //       // packages.add(new MyReactNativePackage());
+    // packages.add(new RNScreensPackage());
+    // packages.add(new com.swmansion.rnscreens.RNScreensPackage());
+    // packages.add(new BlurViewPackage());
+
+    
     
 
           return packages;

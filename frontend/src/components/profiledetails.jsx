@@ -7,6 +7,7 @@ import firestore from '@react-native-firebase/firestore';
 import fetchUserDetails from '../services.jsx/fetchUser';
 import axios from 'axios';
 import ImagePicker from 'react-native-image-crop-picker';
+import storage from '@react-native-firebase/storage';
 
 const ProfileDetails = ({
   userId,
@@ -39,12 +40,46 @@ const ProfileDetails = ({
       .then(image => {
         const uri = image.path; // 'path' for cropped image
         setProfilePic(uri); // Update the local state to display the new image
-        saveImageUri(uri); // Optionally save the new image URI to Firestore
+        uploadImageToFirebase(uri); // Optionally save the new image URI to Firestore
       })
       .catch(error => {
         console.log('Error picking image: ', error);
       });
   };
+
+  const uploadImageToFirebase = async uri => {
+    try {
+      const filename = uri.substring(uri.lastIndexOf('/') + 1);
+      const uploadUri =
+        Platform.OS === 'ios' ? uri.replace('file://', '') : uri;
+
+      // Create a reference to the Firebase Storage bucket
+      const storageRef = storage().ref(`profilePics/${filename}`);
+      const task = storageRef.putFile(uploadUri);
+
+      // Listen for state changes, errors, and completion of the upload.
+      task.on(
+        'state_changed',
+        snapshot => {
+          console.log('Snapshot state: ', snapshot.state); // Shows the upload progress
+        },
+        error => {
+          console.error('Error uploading image: ', error);
+        },
+        () => {
+          // Handle successful uploads on complete
+          task.snapshot.ref.getDownloadURL().then(downloadURL => {
+            console.log('File available at', downloadURL);
+            saveImageUri(downloadURL); // Save the download URL to Firestore
+          });
+        },
+      );
+    } catch (error) {
+      console.error('Error updating profile picture: ', error);
+      alert('Failed to update profile picture.');
+    }
+  };
+
   const saveImageUri = async uri => {
     try {
       const userRef = firestore().collection('users').doc(yourUserId);
