@@ -74,3 +74,4 @@ backend/dummy.txt
 backend/output.txt
 
 frontend/vendor/bundle/ruby/2.6.0/
+frontend/yunomi.keystore
