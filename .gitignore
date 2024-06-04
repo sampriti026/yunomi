@@ -64,3 +64,13 @@ yarn-error.log
 
 # testing
 /coverage
+
+backend/.venv/
+backend/__pycache__/
+backend/firebase.json
+backend/key.key
+backend/yunomi026-firebase-adminsdk-b9dts-7aeacab137.json
+backend/dummy.txt
+backend/output.txt
+
+frontend/vendor/bundle/ruby/2.6.0/
