@@ -124,6 +124,7 @@ async def find_top_matching_users(original_prompt, current_user_id, current_mess
         {"role": "user", "content": f"{original_prompt}"}
         ]
 
+
         summary_response = await openai.chat.completions.create(
             model="gpt-4o",
             messages=openai_message,
