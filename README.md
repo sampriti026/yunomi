@@ -10,11 +10,11 @@ Yunomi is an AI-driven mobile app designed to help you discover the right intern
 
 ## 🔖 Features
 
-**Engage with Nomi:** Chat with our bot, Nomi, who will understand your messages and connect you with like-minded individuals.
-**Explore User Profiles:** Gain insights into users through the public conversations they're having, offering a genuine understanding of their persona beyond the performative layers in other social networks.
-**Feed:** Explore messages from 150 users worldwide, selected based on the "Dunbar Number" which represents the optimal number of meaningful connections a person can maintain. Replying to these messages initiates one-on-one conversations, bridging thoughts and people.
-**Share and Connect:** Easily share thoughts from personal chats to the public domain by swiping messages in your chatbox. This feature enhances the expression of your authentic self and fosters connections through genuine conversations.
-**Private Connections:** Send private messages only to mutual likes, ensuring meaningful and desired interactions.
+- **Engage with Nomi:** Chat with our bot, Nomi, who will understand your messages and connect you with like-minded individuals.
+- **Explore User Profiles:** Gain insights into users through the public conversations they're having, offering a genuine understanding of their persona beyond the performative layers in other social networks.
+- **Feed:** Explore messages from 150 users worldwide, selected based on the "Dunbar Number" which represents the optimal number of meaningful connections a person can maintain. Replying to these messages initiates one-on-one conversations, bridging thoughts and people.
+- **Share and Connect:** Easily share thoughts from personal chats to the public domain by swiping messages in your chatbox. This feature enhances the expression of your authentic self and fosters connections through genuine conversations.
+- **Private Connections:** Send private messages only to mutual likes, ensuring meaningful and desired interactions.
 
 
 
