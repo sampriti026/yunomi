@@ -28,10 +28,7 @@ Yunomi is an AI-driven mobile app designed to help you discover the right intern
 - React Native, Javascript, HTML, CSS
 - OpenAI for embeddings, function calling, and chat-completions, Python, FastAPI, Milvus, 
 
-![Nomi Interaction](https://i.imgur.com/DJ9irTy.gif)
-![Yunomi Send a message to someone](https://i.imgur.com/djoRJjR.gif)
-![Yunomi View other's conversation](https://i.imgur.com/Gtbx3I4.gif)
-
+![Nomi Interaction](https://i.imgur.com/Ti8tGSh.gif) 
 ## Licenses
 
 
